@@ -751,7 +751,10 @@ html, body {
       <div class="card">
         <div class="card-title">
           <span>📋 今日计划</span>
-          <span style="font-size:13px;color:var(--text-muted);" id="planProgressText">0/0</span>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <button class="btn btn-ghost" style="font-size:12px;padding:4px 10px;" onclick="showTemplateModal()">📋 模板</button>
+            <span style="font-size:13px;color:var(--text-muted);" id="planProgressText">0/0</span>
+          </div>
         </div>
         <div class="progress-bar"><div class="progress-fill" id="planProgressFill" style="width:0%"></div></div>
         <ul class="task-list" id="taskList" style="margin-top:12px;"></ul>
@@ -1304,6 +1307,91 @@ function showAddTaskModal(task = null) {
     </div>
     <button class="btn btn-primary btn-full" onclick="saveTask(${isEdit ? task.id : 0})">💾 保存</button>
   `);
+}
+
+/* ========================================
+   计划模板
+   ======================================== */
+const PLAN_TEMPLATES = [
+  {
+    name: '💪 减肥计划',
+    tasks: [
+      { title: '一天一餐', note: '今天只吃一餐，控制热量摄入' },
+      { title: '过5点不食', note: '下午5点后不再进食' },
+      { title: '不喝饮料', note: '只喝水，不喝含糖饮料' },
+      { title: '不吃雪糕', note: '今天不吃雪糕/冰激凌' },
+      { title: '减少水果摄入', note: '控制水果量，避免糖分过高' }
+    ]
+  },
+  {
+    name: '🐱 养猫计划',
+    tasks: [
+      { title: '给猫滴眼药水', note: '每日按时给猫猫滴眼药水' },
+      { title: '记得带猫猫打三联疫苗', note: '安排时间带猫去打三联疫苗' }
+    ]
+  }
+];
+
+function showTemplateModal() {
+  const html = `
+    <div class="modal-header">
+      <h2>📋 计划模板</h2>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">
+      勾选要添加的项目，一键加到今天（${formatDate(currentPlanDate)}）
+    </div>
+    ${PLAN_TEMPLATES.map((tpl, ti) => `
+      <div class="card" style="background:var(--green-bg);margin-bottom:10px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <span style="font-weight:700;color:var(--text-title);font-size:15px;">${tpl.name}</span>
+          <button class="btn btn-ghost" style="font-size:11px;padding:3px 8px;" onclick="toggleTemplateAll(${ti})" id="tplToggle${ti}">全选</button>
+        </div>
+        ${tpl.tasks.map((t, idx) => `
+          <label style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--white);border-radius:8px;margin-bottom:6px;cursor:pointer;">
+            <input type="checkbox" class="tpl-check" data-tpl="${ti}" data-idx="${idx}" checked style="width:18px;height:18px;accent-color:var(--green-primary);">
+            <div style="flex:1;">
+              <div style="font-size:14px;font-weight:600;color:var(--text-title);">${t.title}</div>
+              <div style="font-size:12px;color:var(--text-muted);">${t.note}</div>
+            </div>
+          </label>
+        `).join('')}
+      </div>
+    `).join('')}
+    <button class="btn btn-primary btn-full" onclick="loadTemplate()">✅ 添加选中项到今日</button>
+  `;
+  showModal(html);
+  window._tplSelectAll = {};
+  PLAN_TEMPLATES.forEach((_, i) => { window._tplSelectAll[i] = true; });
+}
+
+function toggleTemplateAll(ti) {
+  const checks = document.querySelectorAll(`.tpl-check[data-tpl="${ti}"]`);
+  const newState = !window._tplSelectAll[ti];
+  window._tplSelectAll[ti] = newState;
+  checks.forEach(c => c.checked = newState);
+  document.getElementById('tplToggle' + ti).textContent = newState ? '取消全选' : '全选';
+}
+
+async function loadTemplate() {
+  const checks = document.querySelectorAll('.tpl-check:checked');
+  if (checks.length === 0) { showToast('请至少勾选一项'); return; }
+  let added = 0;
+  for (const c of checks) {
+    const ti = parseInt(c.dataset.tpl);
+    const idx = parseInt(c.dataset.idx);
+    const t = PLAN_TEMPLATES[ti].tasks[idx];
+    await dbAdd('tasks', {
+      title: t.title, note: t.note,
+      plan_date: currentPlanDate, done: false, created_at: Date.now()
+    });
+    await addPoints(5, '添加任务（模板）');
+    added++;
+  }
+  showToast(`🎉 已添加 ${added} 个计划到今日`);
+  closeModal();
+  renderTasks();
+  updateHeaderStats();
 }
 
 async function saveTask(id) {
