@@ -983,7 +983,10 @@ html, body {
       <div class="card">
         <div class="card-title">
           <span>📒 收支记录</span>
-          <button class="btn btn-ghost" style="font-size:12px;padding:4px 10px;" onclick="toggleChart()">📊 统计</button>
+          <div style="display:flex;gap:6px;">
+            <button class="btn btn-ghost" style="font-size:12px;padding:4px 10px;" onclick="showCategoryManager()">🏷️ 管理分类</button>
+            <button class="btn btn-ghost" style="font-size:12px;padding:4px 10px;" onclick="toggleChart()">📊 统计</button>
+          </div>
         </div>
         <div id="chartView" style="display:none;">
           <div class="chart-container">
@@ -2387,6 +2390,179 @@ function selectCategory(el) {
   el.parentElement.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
   el.classList.add('active');
   window._txCategoryId = parseInt(el.dataset.cat);
+}
+
+/* ========================================
+   分类管理（增删改）
+   ======================================== */
+const EMOJI_CHOICES = ['🧴','💄','💆','💅','🧪','✨','🀄','🍵','🍿','🚪','💰','💵','📦','🏠','💡','👷','🍜','🚌','✈️','🛍️','💊','🎮','📱','🐱','🧋','💸','🍰','🎁','🛒','☕','🍷','🎟️'];
+
+async function showCategoryManager() {
+  const cats = await dbGetAll('categories');
+  const incomeCats = cats.filter(c => c.type === 'income');
+  const expenseCats = cats.filter(c => c.type === 'expense');
+
+  // 收入按 group 分组
+  const incomeGroups = {};
+  incomeCats.forEach(c => {
+    const g = c.group || '其他';
+    if (!incomeGroups[g]) incomeGroups[g] = [];
+    incomeGroups[g].push(c);
+  });
+  const groupEmojis = {'美妆收入':'💄','麻将馆收入':'🀄','其他':'💵'};
+
+  let incomeHtml = '';
+  for (const [gName, gCats] of Object.entries(incomeGroups)) {
+    incomeHtml += `
+      <div class="category-group">
+        <div class="category-group-title">${groupEmojis[gName]||'📁'} ${gName}
+          <button class="btn btn-ghost" style="font-size:11px;padding:2px 8px;margin-left:auto;" onclick="addCategory('income','${gName}')">+ 添加小类</button>
+        </div>
+        ${gCats.map(c => `
+          <div style="display:flex;align-items:center;gap:6px;padding:6px 8px;background:var(--green-bg);border-radius:8px;margin-bottom:4px;">
+            <span style="font-size:18px;">${c.icon}</span>
+            <span style="flex:1;font-size:14px;font-weight:600;color:var(--text-title);">${c.name}</span>
+            <button class="btn btn-ghost" style="font-size:11px;padding:2px 8px;" onclick="editCategory(${c.id})">✏️</button>
+            <button class="btn btn-ghost" style="font-size:11px;padding:2px 8px;color:var(--pink-cute);" onclick="deleteCategory(${c.id})">🗑️</button>
+          </div>
+        `).join('')}
+      </div>`;
+  }
+
+  // 收入可添加新分组
+  incomeHtml += `
+    <div style="margin-top:8px;">
+      <button class="btn btn-ghost btn-full" style="font-size:13px;" onclick="addCategory('income','')">➕ 添加新分组</button>
+    </div>`;
+
+  const expenseHtml = `<div class="category-group">
+    <div class="category-group-title">💸 支出分类
+      <button class="btn btn-ghost" style="font-size:11px;padding:2px 8px;margin-left:auto;" onclick="addCategory('expense','')">+ 添加</button>
+    </div>
+    ${expenseCats.map(c => `
+      <div style="display:flex;align-items:center;gap:6px;padding:6px 8px;background:#FCE4EC;border-radius:8px;margin-bottom:4px;">
+        <span style="font-size:18px;">${c.icon}</span>
+        <span style="flex:1;font-size:14px;font-weight:600;color:var(--text-title);">${c.name}</span>
+        <button class="btn btn-ghost" style="font-size:11px;padding:2px 8px;" onclick="editCategory(${c.id})">✏️</button>
+        <button class="btn btn-ghost" style="font-size:11px;padding:2px 8px;color:var(--pink-cute);" onclick="deleteCategory(${c.id})">🗑️</button>
+      </div>
+    `).join('')}
+  </div>`;
+
+  showModal(`
+    <div class="modal-header">
+      <h2>🏷️ 管理分类</h2>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">
+      可添加、修改、删除各分类小类目
+    </div>
+    ${incomeHtml}
+    <div style="height:1px;background:var(--green-bg);margin:12px 0;"></div>
+    ${expenseHtml}
+  `);
+}
+
+function addCategory(type, group) {
+  const isIncome = type === 'income';
+  const emojiHtml = EMOJI_CHOICES.map((e,i) =>
+    `<span class="emoji-pick" data-emoji="${e}" onclick="pickEmoji(this)" style="font-size:22px;padding:4px;cursor:pointer;border-radius:6px;display:inline-block;">${e}</span>`
+  ).join('');
+
+  showModal(`
+    <div class="modal-header">
+      <h2>➕ 添加分类</h2>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="form-group">
+      <label>分类名称</label>
+      <input type="text" id="newCatName" placeholder="如：面膜销售" maxlength="20">
+    </div>
+    ${isIncome ? `
+    <div class="form-group">
+      <label>所属分组</label>
+      <input type="text" id="newCatGroup" placeholder="如：美妆收入" value="${group||''}" maxlength="20">
+    </div>` : ''}
+    <div class="form-group">
+      <label>选择图标</label>
+      <div style="display:flex;flex-wrap:wrap;gap:2px;background:var(--green-bg);padding:8px;border-radius:8px;" id="emojiPicker">
+        ${emojiHtml}
+      </div>
+      <div style="margin-top:6px;font-size:13px;">已选: <span id="pickedEmoji" style="font-size:20px;">🧴</span></div>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="saveNewCategory('${type}')">💾 保存</button>
+  `);
+  window._pickedEmoji = '🧴';
+}
+
+function pickEmoji(el) {
+  document.querySelectorAll('.emoji-pick').forEach(e => e.style.background = '');
+  el.style.background = 'var(--green-lighter)';
+  window._pickedEmoji = el.dataset.emoji;
+  document.getElementById('pickedEmoji').textContent = window._pickedEmoji;
+}
+
+async function saveNewCategory(type) {
+  const name = document.getElementById('newCatName').value.trim();
+  if (!name) { showToast('请输入分类名称'); return; }
+  const group = type === 'income' ? (document.getElementById('newCatGroup').value.trim() || '其他') : null;
+  const icon = window._pickedEmoji || '💰';
+
+  await dbAdd('categories', { type, name, icon, group });
+  showToast('✅ 已添加');
+  showCategoryManager();
+}
+
+async function editCategory(id) {
+  const cat = await dbGet('categories', id);
+  const emojiHtml = EMOJI_CHOICES.map(e =>
+    `<span class="emoji-pick ${e===cat.icon?'selected':''}" data-emoji="${e}" onclick="pickEmoji(this)" style="font-size:22px;padding:4px;cursor:pointer;border-radius:6px;display:inline-block;${e===cat.icon?'background:var(--green-lighter);':''}">${e}</span>`
+  ).join('');
+
+  showModal(`
+    <div class="modal-header">
+      <h2>✏️ 修改分类</h2>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="form-group">
+      <label>分类名称</label>
+      <input type="text" id="editCatName" value="${escapeHtml(cat.name)}" maxlength="20">
+    </div>
+    ${cat.type === 'income' ? `
+    <div class="form-group">
+      <label>所属分组</label>
+      <input type="text" id="editCatGroup" value="${escapeHtml(cat.group||'')}" maxlength="20">
+    </div>` : ''}
+    <div class="form-group">
+      <label>选择图标</label>
+      <div style="display:flex;flex-wrap:wrap;gap:2px;background:var(--green-bg);padding:8px;border-radius:8px;" id="emojiPicker">
+        ${emojiHtml}
+      </div>
+      <div style="margin-top:6px;font-size:13px;">已选: <span id="pickedEmoji" style="font-size:20px;">${cat.icon}</span></div>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="saveEditCategory(${id})">💾 保存修改</button>
+  `);
+  window._pickedEmoji = cat.icon;
+}
+
+async function saveEditCategory(id) {
+  const cat = await dbGet('categories', id);
+  cat.name = document.getElementById('editCatName').value.trim();
+  if (!cat.name) { showToast('请输入分类名称'); return; }
+  if (cat.type === 'income') {
+    cat.group = document.getElementById('editCatGroup').value.trim() || '其他';
+  }
+  cat.icon = window._pickedEmoji || cat.icon;
+  await dbPut('categories', cat);
+  showToast('✅ 已修改');
+  showCategoryManager();
+}
+
+async function deleteCategory(id) {
+  if (!confirm('确定删除这个分类吗？已记录的账目不受影响。')) return;
+  await dbDelete('categories', id);
+  showToast('已删除');
+  showCategoryManager();
 }
 
 async function saveTx() {
