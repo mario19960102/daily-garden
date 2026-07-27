@@ -266,6 +266,8 @@ html, body {
 }
 .task-item.done { opacity: 0.55; }
 .task-item.done .task-title { text-decoration: line-through; }
+.task-item.failed { opacity: 0.5; }
+.task-item.failed .task-title { text-decoration: line-through; color: var(--pink-cute); }
 .task-checkbox {
   width: 24px;
   height: 24px;
@@ -283,6 +285,47 @@ html, body {
 .task-item.done .task-checkbox {
   background: var(--green-primary);
   border-color: var(--green-primary);
+  color: var(--white);
+}
+.task-item.failed .task-checkbox {
+  background: var(--pink-cute);
+  border-color: var(--pink-cute);
+  color: var(--white);
+}
+.task-checkbox-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex-shrink: 0;
+}
+.task-status-btns {
+  display: flex;
+  gap: 4px;
+}
+.task-status-btn {
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--green-lighter);
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  background: var(--white);
+  transition: all 0.2s;
+  font-family: inherit;
+  padding: 0;
+  line-height: 1;
+}
+.task-status-btn.done {
+  background: var(--green-primary);
+  border-color: var(--green-primary);
+  color: var(--white);
+}
+.task-status-btn.failed {
+  background: var(--pink-cute);
+  border-color: var(--pink-cute);
   color: var(--white);
 }
 .task-content { flex: 1; min-width: 0; }
@@ -1470,10 +1513,11 @@ async function renderTasks() {
 
   const list = document.getElementById('taskList');
   const done = tasks.filter(t => t.done).length;
+  const failed = tasks.filter(t => t.failed).length;
   const total = tasks.length;
   const pct = total > 0 ? (done / total * 100) : 0;
 
-  document.getElementById('planProgressText').textContent = `${done}/${total}`;
+  document.getElementById('planProgressText').textContent = `✓${done} ✗${failed} / ${total}`;
   document.getElementById('planProgressFill').style.width = pct + '%';
 
   if (tasks.length === 0) {
@@ -1481,20 +1525,26 @@ async function renderTasks() {
     return;
   }
 
-  list.innerHTML = tasks.map(t => `
-    <li class="task-item ${t.done ? 'done' : ''}" data-id="${t.id}">
-      <div class="task-checkbox" onclick="toggleTask(${t.id})">${t.done ? '✓' : ''}</div>
+  list.innerHTML = tasks.map(t => {
+    const status = t.done ? 'done' : (t.failed ? 'failed' : '');
+    const statusClass = status;
+    return `
+    <li class="task-item ${statusClass}" data-id="${t.id}">
+      <div class="task-status-btns">
+        <button class="task-status-btn ${t.done ? 'done' : ''}" onclick="setTaskStatus(${t.id}, 'done')" title="完成">✓</button>
+        <button class="task-status-btn ${t.failed ? 'failed' : ''}" onclick="setTaskStatus(${t.id}, 'failed')" title="未完成">✗</button>
+      </div>
       <div class="task-content">
         <div class="task-title">${escapeHtml(t.title)}</div>
         ${t.note ? `<div class="task-note">${escapeHtml(t.note)}</div>` : ''}
       </div>
-      <div class="task-points">+10</div>
+      <div class="task-points">${t.done ? '+10' : (t.failed ? '0' : '+10')}</div>
       <div class="task-actions">
         <button onclick="editTask(${t.id})">✏️</button>
         <button onclick="deleteTask(${t.id})">🗑️</button>
       </div>
-    </li>
-  `).join('');
+    </li>`;
+  }).join('');
 
   // 检测是否解锁终极挑战
   checkBattleUnlocked(tasks, done, total);
@@ -1512,14 +1562,16 @@ async function checkBattleUnlocked(tasks, done, total) {
   const today = todayStr();
   const lastBattleDate = await getSetting('lastBattleDate');
   const alreadyBattled = (lastBattleDate === today);
-  const allDone = total > 0 && done === total;
+  // 全部任务都标记为"完成✓"才算解锁（打✗的不算）
+  const failed = tasks.filter(t => t.failed).length;
+  const allDone = total > 0 && done === total && failed === 0;
 
   if (!allDone) {
     cardEl.innerHTML = `
       <div class="battle-unlock-card locked">
         <div class="title">🧟 终极挑战未解锁</div>
-        <div class="desc">完成今日全部计划后解锁僵尸防御战</div>
-        <button class="btn" disabled>🔒 完成所有任务后开启</button>
+        <div class="desc">今日全部计划打✓后解锁僵尸防御战<br>（打✗的任务需改为✓才能解锁）</div>
+        <button class="btn" disabled>🔒 全部完成后开启</button>
       </div>`;
   } else if (alreadyBattled) {
     cardEl.innerHTML = `
@@ -2115,15 +2167,34 @@ async function deleteTask(id) {
   renderTasks();
 }
 
-async function toggleTask(id) {
+async function setTaskStatus(id, status) {
   const task = await dbGet('tasks', id);
   const wasDone = task.done;
-  task.done = !task.done;
-  await dbPut('tasks', task);
-  if (!wasDone && task.done) {
-    await addPoints(10, `完成任务：${task.title}`);
-    showToast('🎉 完成！+10积分');
+  const wasFailed = task.failed;
+
+  if (status === 'done') {
+    // 点✓：如果已经是done就取消，否则设为done并清除failed
+    if (wasDone) {
+      task.done = false;
+    } else {
+      task.done = true;
+      task.failed = false;
+      if (!wasDone) {
+        await addPoints(10, `完成任务：${task.title}`);
+        showToast('🎉 完成！+10积分');
+      }
+    }
+  } else if (status === 'failed') {
+    // 点✗：如果已经是failed就取消，否则设为failed并清除done
+    if (wasFailed) {
+      task.failed = false;
+    } else {
+      task.failed = true;
+      task.done = false;
+      showToast('📌 标记未完成（0积分）');
+    }
   }
+  await dbPut('tasks', task);
   renderTasks();
   updateHeaderStats();
 }
