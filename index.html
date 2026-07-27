@@ -1118,13 +1118,7 @@ html, body {
 
     <!-- 页面：记录 -->
     <div class="page" id="page-records">
-      <div class="record-tabs" id="recordTabs">
-        <div class="record-tab active" data-cat="diary" onclick="switchRecordCat('diary')">😊 心情日记</div>
-        <div class="record-tab" data-cat="password" onclick="switchRecordCat('password')">🔐 密码</div>
-        <div class="record-tab" data-cat="loan" onclick="switchRecordCat('loan')">💰 借钱</div>
-        <div class="record-tab" data-cat="brand" onclick="switchRecordCat('brand')">🎂 品牌礼</div>
-        <div class="record-tab" data-cat="social" onclick="switchRecordCat('social')">🧧 人情往来</div>
-      </div>
+      <div class="record-tabs" id="recordTabs"></div>
       <div id="recordSummary"></div>
       <div id="recordList"></div>
     </div>
@@ -2192,13 +2186,31 @@ function closeBattle() {
    ======================================== */
 let currentRecordCat = 'diary';
 
-const RECORD_CATS = {
-  diary: { name: '心情日记', store: 'records_diary', icon: '😊' },
-  password: { name: 'APP密码', store: 'records_password', icon: '🔐' },
-  loan: { name: '借钱', store: 'records_loan', icon: '💰' },
-  brand: { name: '品牌生日礼', store: 'records_brand', icon: '🎂' },
-  social: { name: '人情往来', store: 'records_social', icon: '🧧' }
+// 默认记录类目（首次初始化用，之后存数据库可自定义）
+const DEFAULT_RECORD_CATS = {
+  diary: { name: '心情日记', store: 'records_diary', icon: '😊', fields: ['date','mood','content'] },
+  password: { name: 'APP密码', store: 'records_password', icon: '🔐', fields: ['name','account','password','note'] },
+  loan: { name: '借钱', store: 'records_loan', icon: '💰', fields: ['type','person','amount','returned','date','note'] },
+  brand: { name: '品牌生日礼', store: 'records_brand', icon: '🎂', fields: ['brand','birthday','gift','note'] },
+  social: { name: '人情往来', store: 'records_social', icon: '🧧', fields: ['type','person','event','amount','date','note'] }
 };
+
+// 运行时使用的��录类目（从数据库加载）
+let RECORD_CATS = {};
+
+async function loadRecordCats() {
+  const saved = await getSetting('recordCats');
+  if (saved) {
+    RECORD_CATS = JSON.parse(saved);
+  } else {
+    RECORD_CATS = JSON.parse(JSON.stringify(DEFAULT_RECORD_CATS));
+    await setSetting('recordCats', JSON.stringify(RECORD_CATS));
+  }
+}
+
+async function saveRecordCats() {
+  await setSetting('recordCats', JSON.stringify(RECORD_CATS));
+}
 
 const MOOD_OPTIONS = [
   {emoji:'😀',name:'开心'},{emoji:'😊',name:'愉快'},{emoji:'😐',name:'一般'},
@@ -2213,8 +2225,24 @@ function switchRecordCat(cat) {
 }
 
 async function renderRecords() {
+  // 动态渲染标签栏
+  const tabsEl = document.getElementById('recordTabs');
+  if (tabsEl) {
+    let tabsHtml = '';
+    for (const [key, cfg] of Object.entries(RECORD_CATS)) {
+      tabsHtml += `<div class="record-tab ${key===currentRecordCat?'active':''}" data-cat="${key}" onclick="switchRecordCat('${key}')">${cfg.icon} ${cfg.name}</div>`;
+    }
+    tabsHtml += `<div class="record-tab" onclick="showRecordCatManager()" style="background:var(--green-bg);color:var(--green-dark);">⚙️ 管理</div>`;
+    tabsEl.innerHTML = tabsHtml;
+  }
+
   const cat = currentRecordCat;
   const cfg = RECORD_CATS[cat];
+  if (!cfg) {
+    currentRecordCat = Object.keys(RECORD_CATS)[0] || 'diary';
+    renderRecords();
+    return;
+  }
   const store = cfg.store;
 
   // 密码类需要安全锁
@@ -2348,7 +2376,20 @@ function renderRecordItem(cat, r) {
       <div class="record-item-sub">${r.date || ''}${r.note ? ' · '+escapeHtml(r.note) : ''}</div>
     </div>`;
   }
-  return '';
+
+  // 自定义类目（通用格式：标题+内容+日期+备注）
+  return `<div class="record-item">
+    <div class="record-item-header">
+      <span style="font-size:18px;">${cfg.icon}</span>
+      <span class="record-item-title">${escapeHtml(r.title||'')}</span>
+      ${actions}
+    </div>
+    <div class="record-item-sub">
+      ${r.date||''}
+      ${r.content ? `<div style="margin-top:4px;">${escapeHtml(r.content)}</div>` : ''}
+      ${r.note ? `<div style="margin-top:2px;color:var(--text-muted);">备注: ${escapeHtml(r.note)}</div>` : ''}
+    </div>
+  </div>`;
 }
 
 function isBirthdaySoon(birthday) {
@@ -2466,6 +2507,13 @@ function showAddRecordModal(record = null) {
       <div class="form-group"><label>金额</label><input type="number" id="rec_amount" placeholder="0" inputmode="decimal" value="${isEdit?record.amount||'':''}"></div>
       <div class="form-group"><label>日期</label><input type="date" id="rec_date" value="${isEdit?record.date:todayStr()}"></div>
       <div class="form-group"><label>备注</label><input type="text" id="rec_note" placeholder="备注" value="${isEdit?escapeHtml(record.note||''):''}"></div>`;
+  } else {
+    // 自定义类目通用表单
+    formHtml = `
+      <div class="form-group"><label>标题</label><input type="text" id="rec_title" placeholder="标题" value="${isEdit?escapeHtml(record.title||''):''}"></div>
+      <div class="form-group"><label>内容</label><textarea id="rec_content" placeholder="详细内容...">${isEdit?escapeHtml(record.content||''):''}</textarea></div>
+      <div class="form-group"><label>日期</label><input type="date" id="rec_date" value="${isEdit?record.date:todayStr()}"></div>
+      <div class="form-group"><label>备注</label><input type="text" id="rec_note" placeholder="备注" value="${isEdit?escapeHtml(record.note||''):''}"></div>`;
   }
 
   showModal(`
@@ -2541,6 +2589,13 @@ async function saveRecord(cat, id) {
     data.date = document.getElementById('rec_date').value;
     data.note = document.getElementById('rec_note').value.trim();
     if (!data.person) { showToast('请输入对象'); return; }
+  } else {
+    // 自定义类目（通用格式）
+    data.title = document.getElementById('rec_title')?.value.trim() || '';
+    data.content = document.getElementById('rec_content')?.value.trim() || '';
+    data.date = document.getElementById('rec_date')?.value || todayStr();
+    data.note = document.getElementById('rec_note')?.value.trim() || '';
+    if (!data.title) { showToast('请输入标题'); return; }
   }
 
   if (id > 0) {
@@ -2569,6 +2624,131 @@ async function deleteRecord(cat, id) {
   renderRecords();
 }
 
+/* 记录类目管理器 */
+const RECORD_EMOJI_CHOICES = ['📝','😊','🔐','💰','🎂','🧧','📅','📌','🎯','📊','🎁','💳','🏠','🚗','💊','🐾','📚','🎵','💡','⭐'];
+
+function showRecordCatManager() {
+  let html = `
+    <div class="modal-header">
+      <h2>⚙️ 管理记录类目</h2>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">
+      可添加、修改、删除记录类目，保存后永久生效
+    </div>`;
+  for (const [key, cfg] of Object.entries(RECORD_CATS)) {
+    html += `
+      <div class="card" style="background:var(--green-bg);margin-bottom:8px;">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:20px;">${cfg.icon}</span>
+          <span style="flex:1;font-weight:600;color:var(--text-title);">${cfg.name}</span>
+          <button class="btn btn-ghost" style="font-size:11px;padding:3px 8px;" onclick="editRecordCat('${key}')">✏️</button>
+          <button class="btn btn-ghost" style="font-size:11px;padding:3px 8px;color:var(--pink-cute);" onclick="deleteRecordCat('${key}')">🗑️</button>
+        </div>
+      </div>`;
+  }
+  html += `
+    <button class="btn btn-primary btn-full" onclick="addRecordCat()">➕ 添加新类目</button>`;
+  showModal(html);
+}
+
+function addRecordCat() {
+  const emojiHtml = RECORD_EMOJI_CHOICES.map(e =>
+    `<span class="emoji-pick" data-emoji="${e}" onclick="pickEmoji(this)" style="font-size:22px;padding:4px;cursor:pointer;border-radius:6px;display:inline-block;">${e}</span>`
+  ).join('');
+  showModal(`
+    <div class="modal-header"><h2>➕ 添加记录类目</h2><button class="modal-close" onclick="closeModal()">×</button></div>
+    <div class="form-group"><label>类目名称</label><input type="text" id="newCatName" placeholder="如：读书笔记、健身记录" maxlength="10"></div>
+    <div class="form-group"><label>选择图标</label>
+      <div style="display:flex;flex-wrap:wrap;gap:2px;background:var(--green-bg);padding:8px;border-radius:8px;">${emojiHtml}</div>
+      <div style="margin-top:6px;font-size:13px;">已选: <span id="pickedEmoji" style="font-size:20px;">📝</span></div>
+    </div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">
+      新类目将使用通用记录格式（标题+内容+日期+备注）
+    </div>
+    <button class="btn btn-primary btn-full" onclick="saveNewRecordCat()">💾 保存</button>
+  `);
+  window._pickedEmoji = '📝';
+}
+
+function editRecordCat(key) {
+  const cfg = RECORD_CATS[key];
+  const emojiHtml = RECORD_EMOJI_CHOICES.map(e =>
+    `<span class="emoji-pick ${e===cfg.icon?'selected':''}" data-emoji="${e}" onclick="pickEmoji(this)" style="font-size:22px;padding:4px;cursor:pointer;border-radius:6px;display:inline-block;${e===cfg.icon?'background:var(--green-lighter);':''}">${e}</span>`
+  ).join('');
+  showModal(`
+    <div class="modal-header"><h2>✏️ 修改类目</h2><button class="modal-close" onclick="closeModal()">×</button></div>
+    <div class="form-group"><label>类目名称</label><input type="text" id="editCatName" value="${escapeHtml(cfg.name)}" maxlength="10"></div>
+    <div class="form-group"><label>选择图标</label>
+      <div style="display:flex;flex-wrap:wrap;gap:2px;background:var(--green-bg);padding:8px;border-radius:8px;">${emojiHtml}</div>
+      <div style="margin-top:6px;font-size:13px;">已选: <span id="pickedEmoji" style="font-size:20px;">${cfg.icon}</span></div>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="saveEditRecordCat('${key}')">💾 保存修改</button>
+  `);
+  window._pickedEmoji = cfg.icon;
+}
+
+async function saveNewRecordCat() {
+  const name = document.getElementById('newCatName').value.trim();
+  if (!name) { showToast('请输入类目名称'); return; }
+  const icon = window._pickedEmoji || '📝';
+  const key = 'custom_' + Date.now();
+  const storeName = 'records_' + key;
+  // 动态添加 store 到 STORES
+  STORES[storeName] = { keyPath: 'id', indexes: ['created_at'] };
+  // 需要升级数据库版本来创建新 store
+  await upgradeDBForNewStore(storeName);
+  RECORD_CATS[key] = { name, store: storeName, icon, fields: ['title','content','date','note'] };
+  await saveRecordCats();
+  showToast('✅ 已添加新类目');
+  closeModal();
+  switchRecordCat(key);
+}
+
+async function saveEditRecordCat(key) {
+  const cfg = RECORD_CATS[key];
+  cfg.name = document.getElementById('editCatName').value.trim();
+  cfg.icon = window._pickedEmoji || cfg.icon;
+  await saveRecordCats();
+  showToast('✅ 已修改');
+  closeModal();
+  renderRecords();
+}
+
+async function deleteRecordCat(key) {
+  if (!confirm('确定删除这个类目吗？已有记录不会删除但将无法查看。')) return;
+  delete RECORD_CATS[key];
+  await saveRecordCats();
+  showToast('已删除');
+  closeModal();
+  // 切到第一个可用类目
+  currentRecordCat = Object.keys(RECORD_CATS)[0] || 'diary';
+  renderRecords();
+}
+
+async function upgradeDBForNewStore(storeName) {
+  return new Promise((resolve) => {
+    const currentVersion = db.version;
+    db.close();
+    const req = indexedDB.open(DB_NAME, currentVersion + 1);
+    req.onupgradeneeded = (e) => {
+      const d = e.target.result;
+      if (!d.objectStoreNames.contains(storeName)) {
+        d.createObjectStore(storeName, { keyPath: 'id', autoIncrement: true });
+      }
+    };
+    req.onsuccess = (e) => { db = e.target.result; resolve(); };
+    req.onerror = () => resolve();
+  });
+}
+
+function pickEmoji(el) {
+  document.querySelectorAll('.emoji-pick').forEach(e => e.style.background = '');
+  el.style.background = 'var(--green-lighter)';
+  window._pickedEmoji = el.dataset.emoji;
+  document.getElementById('pickedEmoji').textContent = window._pickedEmoji;
+}
+
 function showAddTaskModal(task = null) {
   const isEdit = !!task;
   showModal(`
@@ -2595,7 +2775,8 @@ function showAddTaskModal(task = null) {
 /* ========================================
    计划模板
    ======================================== */
-const PLAN_TEMPLATES = [
+// 默认模板（首次初始化用，之后存数据库可自定义编辑）
+const DEFAULT_PLAN_TEMPLATES = [
   {
     name: '💪 减肥计划',
     tasks: [
@@ -2626,11 +2807,31 @@ const PLAN_TEMPLATES = [
   }
 ];
 
+// 运行时使用的模板（从数据库加载）
+let PLAN_TEMPLATES = [];
+
+async function loadPlanTemplates() {
+  const saved = await getSetting('planTemplates');
+  if (saved) {
+    PLAN_TEMPLATES = JSON.parse(saved);
+  } else {
+    PLAN_TEMPLATES = JSON.parse(JSON.stringify(DEFAULT_PLAN_TEMPLATES));
+    await setSetting('planTemplates', JSON.stringify(PLAN_TEMPLATES));
+  }
+}
+
+async function savePlanTemplates() {
+  await setSetting('planTemplates', JSON.stringify(PLAN_TEMPLATES));
+}
+
 function showTemplateModal() {
   const html = `
     <div class="modal-header">
       <h2>📋 计划模板</h2>
-      <button class="modal-close" onclick="closeModal()">×</button>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-ghost" style="font-size:11px;padding:3px 8px;" onclick="showTemplateEditor()">✏️ 管理</button>
+        <button class="modal-close" onclick="closeModal()">×</button>
+      </div>
     </div>
     <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">
       勾选要添加的项目，一键加到今天（${formatDate(currentPlanDate)}）
@@ -2686,6 +2887,76 @@ async function loadTemplate() {
   closeModal();
   renderTasks();
   updateHeaderStats();
+}
+
+/* 模板编辑器 */
+function showTemplateEditor() {
+  const html = `
+    <div class="modal-header">
+      <h2>✏️ 管理模板</h2>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">
+      可添加、修改、删除模板分组和项目
+    </div>
+    ${PLAN_TEMPLATES.map((tpl, ti) => `
+      <div class="card" style="background:var(--green-bg);margin-bottom:10px;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+          <input type="text" value="${escapeHtml(tpl.name)}" style="flex:1;font-size:14px;font-weight:600;border:2px solid var(--green-lighter);border-radius:6px;padding:6px;" id="tplName_${ti}">
+          <button class="btn btn-ghost" style="font-size:11px;padding:3px 8px;color:var(--pink-cute);" onclick="deleteTemplateGroup(${ti})">🗑️</button>
+        </div>
+        ${tpl.tasks.map((t, idx) => `
+          <div style="display:flex;gap:4px;margin-bottom:4px;align-items:center;">
+            <input type="text" value="${escapeHtml(t.title)}" placeholder="任务名" style="flex:2;font-size:13px;border:1px solid var(--green-lighter);border-radius:6px;padding:5px;" id="tplTask_${ti}_${idx}_title">
+            <input type="text" value="${escapeHtml(t.note||'')}" placeholder="备注" style="flex:3;font-size:13px;border:1px solid var(--green-lighter);border-radius:6px;padding:5px;" id="tplTask_${ti}_${idx}_note">
+            <button class="btn btn-ghost" style="font-size:11px;padding:3px 6px;color:var(--pink-cute);" onclick="deleteTemplateTask(${ti},${idx})">✗</button>
+          </div>
+        `).join('')}
+        <button class="btn btn-ghost" style="font-size:11px;padding:3px 8px;margin-top:4px;width:100%;" onclick="addTemplateTask(${ti})">+ 添加项目</button>
+      </div>
+    `).join('')}
+    <button class="btn btn-ghost btn-full" style="font-size:13px;margin-bottom:8px;" onclick="addTemplateGroup()">➕ 添加新分组</button>
+    <button class="btn btn-primary btn-full" onclick="saveAllTemplates()">💾 保存所有修改</button>
+  `;
+  showModal(html);
+}
+
+function addTemplateTask(ti) {
+  PLAN_TEMPLATES[ti].tasks.push({ title: '新任务', note: '' });
+  showTemplateEditor();
+}
+
+function deleteTemplateTask(ti, idx) {
+  PLAN_TEMPLATES[ti].tasks.splice(idx, 1);
+  showTemplateEditor();
+}
+
+function addTemplateGroup() {
+  PLAN_TEMPLATES.push({ name: '📋 新分组', tasks: [{ title: '新任务', note: '' }] });
+  showTemplateEditor();
+}
+
+function deleteTemplateGroup(ti) {
+  if (!confirm('确定删除整个分组吗？')) return;
+  PLAN_TEMPLATES.splice(ti, 1);
+  showTemplateEditor();
+}
+
+async function saveAllTemplates() {
+  for (let ti = 0; ti < PLAN_TEMPLATES.length; ti++) {
+    const nameEl = document.getElementById(`tplName_${ti}`);
+    if (nameEl) PLAN_TEMPLATES[ti].name = nameEl.value.trim();
+    for (let idx = 0; idx < PLAN_TEMPLATES[ti].tasks.length; idx++) {
+      const titleEl = document.getElementById(`tplTask_${ti}_${idx}_title`);
+      const noteEl = document.getElementById(`tplTask_${ti}_${idx}_note`);
+      if (titleEl) PLAN_TEMPLATES[ti].tasks[idx].title = titleEl.value.trim();
+      if (noteEl) PLAN_TEMPLATES[ti].tasks[idx].note = noteEl.value.trim();
+    }
+  }
+  await savePlanTemplates();
+  showToast('✅ 模板已保存');
+  closeModal();
+  showTemplateModal();
 }
 
 async function saveTask(id) {
@@ -3488,6 +3759,8 @@ async function confirmReset() {
    ======================================== */
 async function init() {
   await initDB();
+  await loadPlanTemplates();
+  await loadRecordCats();
   await updateHeaderStats();
   await renderTasks();
   // 隐藏引导（已添加主屏幕后）
