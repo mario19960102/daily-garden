@@ -2173,22 +2173,27 @@ async function setTaskStatus(id, status) {
   const wasFailed = task.failed;
 
   if (status === 'done') {
-    // 点✓：如果已经是done就取消，否则设为done并清除failed
+    // 点✓：如果已经是done就取消（扣回积分），否则设为done并清除failed
     if (wasDone) {
       task.done = false;
+      await addPoints(-10, `取消完成：${task.title}`);
+      showToast('↩️ 已取消完成，-10积分');
     } else {
       task.done = true;
       task.failed = false;
-      if (!wasDone) {
-        await addPoints(10, `完成任务：${task.title}`);
-        showToast('🎉 完成！+10积分');
-      }
+      await addPoints(10, `完成任务：${task.title}`);
+      showToast('🎉 完成！+10积分');
     }
   } else if (status === 'failed') {
     // 点✗：如果已经是failed就取消，否则设为failed并清除done
     if (wasFailed) {
       task.failed = false;
+      showToast('↩️ 已取消未完成标记');
     } else {
+      // 如果之前是完成状态，扣回积分
+      if (wasDone) {
+        await addPoints(-10, `改为未完成：${task.title}`);
+      }
       task.failed = true;
       task.done = false;
       showToast('📌 标记未完成（0积分）');
