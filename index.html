@@ -909,6 +909,124 @@ html, body {
   padding: 4px 10px;
   font-size: 12px;
 }
+
+/* ========== 记录模块 ========== */
+.record-tabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 4px 0 8px;
+  margin: 0 -4px 8px;
+  padding-left: 4px;
+}
+.record-tab {
+  flex-shrink: 0;
+  padding: 8px 14px;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: 600;
+  background: var(--white);
+  color: var(--text-muted);
+  border: 2px solid transparent;
+  box-shadow: var(--shadow-card);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+.record-tab.active {
+  background: var(--green-primary);
+  color: var(--white);
+  border-color: var(--green-dark);
+}
+.record-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.record-summary-card {
+  background: var(--white);
+  border-radius: var(--radius-btn);
+  padding: 10px 8px;
+  text-align: center;
+  box-shadow: var(--shadow-card);
+}
+.record-summary-card .label { font-size: 11px; color: var(--text-muted); }
+.record-summary-card .value { font-size: 16px; font-weight: 700; margin-top: 2px; }
+.record-item {
+  background: var(--white);
+  border-radius: var(--radius-btn);
+  padding: 12px;
+  margin-bottom: 8px;
+  box-shadow: var(--shadow-card);
+}
+.record-item-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.record-item-title { font-size: 15px; font-weight: 600; color: var(--text-title); flex: 1; }
+.record-item-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+.record-item-actions { display: flex; gap: 4px; }
+.record-item-actions button {
+  background: none; border: none; font-size: 16px; cursor: pointer; padding: 4px;
+}
+.record-amount { font-weight: 700; font-size: 15px; }
+.record-amount.income { color: var(--green-primary); }
+.record-amount.expense { color: var(--pink-cute); }
+.record-amount.lend { color: var(--blue-deep); }
+.record-amount.borrow { color: var(--yellow-sun); }
+.record-tag {
+  display: inline-block;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+.record-tag.returned { background: var(--green-bg); color: var(--green-dark); }
+.record-tag.unreturned { background: #FFF3E0; color: #E65100; }
+.record-tag.birthday-soon { background: #FCE4EC; color: #C62828; }
+.password-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.password-text {
+  -webkit-text-security: disc;
+  letter-spacing: 2px;
+}
+.password-text.revealed {
+  -webkit-text-security: none;
+  letter-spacing: normal;
+}
+.password-toggle {
+  background: var(--green-bg);
+  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 14px;
+}
+.lock-screen {
+  text-align: center;
+  padding: 30px 20px;
+}
+.lock-screen .lock-icon { font-size: 48px; display: block; margin-bottom: 12px; }
+.lock-screen input {
+  width: 100%;
+  max-width: 200px;
+  padding: 12px;
+  border: 2px solid var(--green-lighter);
+  border-radius: var(--radius-btn);
+  font-size: 18px;
+  text-align: center;
+  letter-spacing: 4px;
+  margin: 0 auto 12px;
+  display: block;
+}
+.lock-screen input:focus { border-color: var(--green-primary); outline: none; }
 </style>
 </head>
 <body>
@@ -996,6 +1114,19 @@ html, body {
         </div>
         <div id="txList"></div>
       </div>
+    </div>
+
+    <!-- 页面：记录 -->
+    <div class="page" id="page-records">
+      <div class="record-tabs" id="recordTabs">
+        <div class="record-tab active" data-cat="diary" onclick="switchRecordCat('diary')">😊 心情日记</div>
+        <div class="record-tab" data-cat="password" onclick="switchRecordCat('password')">🔐 密码</div>
+        <div class="record-tab" data-cat="loan" onclick="switchRecordCat('loan')">💰 借钱</div>
+        <div class="record-tab" data-cat="brand" onclick="switchRecordCat('brand')">🎂 品牌礼</div>
+        <div class="record-tab" data-cat="social" onclick="switchRecordCat('social')">🧧 人情往来</div>
+      </div>
+      <div id="recordSummary"></div>
+      <div id="recordList"></div>
     </div>
 
     <!-- 页面：图鉴 -->
@@ -1091,6 +1222,9 @@ html, body {
     <button class="tab" data-page="finance" onclick="switchPage('finance')">
       <span class="icon">💰</span><span class="label">记账</span>
     </button>
+    <button class="tab" data-page="records" onclick="switchPage('records')">
+      <span class="icon">📝</span><span class="label">记录</span>
+    </button>
     <button class="tab" data-page="almanac" onclick="switchPage('almanac')">
       <span class="icon">🌱</span><span class="label">图鉴</span>
     </button>
@@ -1113,7 +1247,7 @@ html, body {
    数据层：IndexedDB 封装
    ======================================== */
 const DB_NAME = 'DailyGardenDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 let db = null;
 
 const STORES = {
@@ -1123,7 +1257,12 @@ const STORES = {
   plants: { keyPath: 'id', indexes: ['unlocked'] },
   dolphin: { keyPath: 'id' },
   points_log: { keyPath: 'id', indexes: ['created_at'] },
-  settings: { keyPath: 'key' }
+  settings: { keyPath: 'key' },
+  records_diary: { keyPath: 'id', indexes: ['date'] },
+  records_password: { keyPath: 'id', indexes: ['name'] },
+  records_loan: { keyPath: 'id', indexes: ['date'] },
+  records_brand: { keyPath: 'id', indexes: ['brand'] },
+  records_social: { keyPath: 'id', indexes: ['date'] }
 };
 
 function openDB() {
@@ -1486,10 +1625,11 @@ function switchPage(page) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-' + page).classList.add('active');
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.page === page));
-  document.getElementById('fab').style.display = (page === 'plan' || page === 'finance') ? 'flex' : 'none';
+  document.getElementById('fab').style.display = (page === 'plan' || page === 'finance' || page === 'records') ? 'flex' : 'none';
 
   if (page === 'plan') renderTasks();
   if (page === 'finance') renderTransactions();
+  if (page === 'records') renderRecords();
   if (page === 'almanac') renderAlmanac();
   if (page === 'dolphin') renderDolphin();
 }
@@ -1497,6 +1637,7 @@ function switchPage(page) {
 function onFabClick() {
   if (currentPage === 'plan') showAddTaskModal();
   if (currentPage === 'finance') showAddTxModal();
+  if (currentPage === 'records') showAddRecordModal();
 }
 
 function toggleMenu() {
@@ -2044,6 +2185,388 @@ async function endBattle(result) {
 function closeBattle() {
   closeModal();
   if (currentPage === 'almanac') renderAlmanac();
+}
+
+/* ========================================
+   记录模块
+   ======================================== */
+let currentRecordCat = 'diary';
+
+const RECORD_CATS = {
+  diary: { name: '心情日记', store: 'records_diary', icon: '😊' },
+  password: { name: 'APP密码', store: 'records_password', icon: '🔐' },
+  loan: { name: '借钱', store: 'records_loan', icon: '💰' },
+  brand: { name: '品牌生日礼', store: 'records_brand', icon: '🎂' },
+  social: { name: '人情往来', store: 'records_social', icon: '🧧' }
+};
+
+const MOOD_OPTIONS = [
+  {emoji:'😀',name:'开心'},{emoji:'😊',name:'愉快'},{emoji:'😐',name:'一般'},
+  {emoji:'😢',name:'难过'},{emoji:'😡',name:'生气'},{emoji:'😍',name:'幸福'},
+  {emoji:'😴',name:'疲惫'},{emoji:'🤒',name:'不适'}
+];
+
+function switchRecordCat(cat) {
+  currentRecordCat = cat;
+  document.querySelectorAll('.record-tab').forEach(t => t.classList.toggle('active', t.dataset.cat === cat));
+  renderRecords();
+}
+
+async function renderRecords() {
+  const cat = currentRecordCat;
+  const cfg = RECORD_CATS[cat];
+  const store = cfg.store;
+
+  // 密码类需要安全锁
+  if (cat === 'password') {
+    const unlocked = await getSetting('passwordUnlocked');
+    const unlockTime = await getSetting('passwordUnlockTime');
+    const now = Date.now();
+    if (unlocked !== 'true' || !unlockTime || now - parseInt(unlockTime) > 5*60*1000) {
+      renderPasswordLock();
+      return;
+    }
+  }
+
+  const records = await dbGetAll(store);
+  records.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+
+  // 汇总卡片
+  const summaryEl = document.getElementById('recordSummary');
+  const listEl = document.getElementById('recordList');
+
+  if (cat === 'loan') {
+    const lend = records.filter(r => r.type === 'lend' && !r.returned).reduce((s,r) => s+r.amount, 0);
+    const borrow = records.filter(r => r.type === 'borrow' && !r.returned).reduce((s,r) => s+r.amount, 0);
+    summaryEl.innerHTML = `
+      <div class="record-summary">
+        <div class="record-summary-card"><div class="label">借出未还</div><div class="value" style="color:var(--blue-deep)">¥${lend}</div></div>
+        <div class="record-summary-card"><div class="label">借入未还</div><div class="value" style="color:var(--yellow-sun)">¥${borrow}</div></div>
+        <div class="record-summary-card"><div class="label">总记录</div><div class="value">${records.length}</div></div>
+      </div>`;
+  } else if (cat === 'social') {
+    const inc = records.filter(r => r.type === 'income').reduce((s,r) => s+r.amount, 0);
+    const exp = records.filter(r => r.type === 'expense').reduce((s,r) => s+r.amount, 0);
+    summaryEl.innerHTML = `
+      <div class="record-summary">
+        <div class="record-summary-card"><div class="label">收人情</div><div class="value" style="color:var(--green-primary)">¥${inc}</div></div>
+        <div class="record-summary-card"><div class="label">送人情</div><div class="value" style="color:var(--pink-cute)">¥${exp}</div></div>
+        <div class="record-summary-card"><div class="label">净额</div><div class="value" style="color:${inc-exp>=0?'var(--green-primary)':'var(--pink-cute)'}">¥${inc-exp}</div></div>
+      </div>`;
+  } else {
+    summaryEl.innerHTML = '';
+  }
+
+  if (records.length === 0) {
+    listEl.innerHTML = `<div class="empty-state"><span class="emoji">${cfg.icon}</span><span class="text">还没有${cfg.name}记录<br>点击右下角 + 添加</span></div>`;
+    return;
+  }
+
+  listEl.innerHTML = records.map(r => renderRecordItem(cat, r)).join('');
+}
+
+function renderRecordItem(cat, r) {
+  const actions = `
+    <div class="record-item-actions">
+      <button onclick="editRecord('${cat}',${r.id})">✏️</button>
+      <button onclick="deleteRecord('${cat}',${r.id})">🗑️</button>
+    </div>`;
+
+  if (cat === 'diary') {
+    return `<div class="record-item">
+      <div class="record-item-header">
+        <span style="font-size:24px;">${r.mood||'😊'}</span>
+        <span class="record-item-title">${r.date || ''}</span>
+        ${actions}
+      </div>
+      <div class="record-item-sub">${escapeHtml(r.content||'')}</div>
+    </div>`;
+  }
+
+  if (cat === 'password') {
+    return `<div class="record-item">
+      <div class="record-item-header">
+        <span style="font-size:18px;">🔑</span>
+        <span class="record-item-title">${escapeHtml(r.name)}</span>
+        ${actions}
+      </div>
+      <div class="record-item-sub">
+        账号: ${escapeHtml(r.account||'')}
+        <div class="password-field" style="margin-top:4px;">
+          <span>密码: </span>
+          <span class="password-text" id="pwd-${r.id}">${escapeHtml(r.password||'')}</span>
+          <button class="password-toggle" onclick="togglePassword(${r.id})">👁️</button>
+        </div>
+        ${r.note ? `<div style="margin-top:4px;">备注: ${escapeHtml(r.note)}</div>` : ''}
+      </div>
+    </div>`;
+  }
+
+  if (cat === 'loan') {
+    const isLend = r.type === 'lend';
+    return `<div class="record-item">
+      <div class="record-item-header">
+        <span style="font-size:18px;">${isLend?'📤':'📥'}</span>
+        <span class="record-item-title">${escapeHtml(r.person)} ${isLend?'借出':'借入'}</span>
+        <span class="record-amount ${isLend?'lend':'borrow'}">${isLend?'+':'-'}¥${r.amount}</span>
+        ${actions}
+      </div>
+      <div class="record-item-sub">
+        ${r.date||''}
+        <span class="record-tag ${r.returned?'returned':'unreturned'}" style="margin-left:6px;">${r.returned?'✓已归还':'✗未归还'}</span>
+        ${r.note ? `<div style="margin-top:4px;">${escapeHtml(r.note)}</div>` : ''}
+      </div>
+    </div>`;
+  }
+
+  if (cat === 'brand') {
+    const soon = isBirthdaySoon(r.birthday);
+    return `<div class="record-item">
+      <div class="record-item-header">
+        <span style="font-size:18px;">🎂</span>
+        <span class="record-item-title">${escapeHtml(r.brand)}</span>
+        ${soon ? '<span class="record-tag birthday-soon">本月生日</span>' : ''}
+        ${actions}
+      </div>
+      <div class="record-item-sub">
+        生日: ${r.birthday || ''}
+        ${r.gift ? `<div style="margin-top:4px;">🎁 ${escapeHtml(r.gift)}</div>` : ''}
+        ${r.note ? `<div style="margin-top:2px;">${escapeHtml(r.note)}</div>` : ''}
+      </div>
+    </div>`;
+  }
+
+  if (cat === 'social') {
+    const isIncome = r.type === 'income';
+    return `<div class="record-item">
+      <div class="record-item-header">
+        <span style="font-size:18px;">${isIncome?'🧧':'🎁'}</span>
+        <span class="record-item-title">${escapeHtml(r.person)} - ${escapeHtml(r.event||'')}</span>
+        <span class="record-amount ${isIncome?'income':'expense'}">${isIncome?'+':'-'}¥${r.amount}</span>
+        ${actions}
+      </div>
+      <div class="record-item-sub">${r.date || ''}${r.note ? ' · '+escapeHtml(r.note) : ''}</div>
+    </div>`;
+  }
+  return '';
+}
+
+function isBirthdaySoon(birthday) {
+  if (!birthday) return false;
+  const today = new Date();
+  const m = today.getMonth() + 1;
+  const d = today.getDate();
+  const parts = birthday.split('-');
+  const bm = parseInt(parts[1]);
+  const bd = parseInt(parts[2]);
+  if (bm === m && bd >= d && bd <= d + 7) return true;
+  return false;
+}
+
+function togglePassword(id) {
+  const el = document.getElementById('pwd-' + id);
+  if (el) el.classList.toggle('revealed');
+}
+
+/* 密码安全锁 */
+async function renderPasswordLock() {
+  document.getElementById('recordSummary').innerHTML = '';
+  const hasPwd = await getSetting('appLockPassword');
+  document.getElementById('recordList').innerHTML = `
+    <div class="lock-screen">
+      <span class="lock-icon">🔒</span>
+      <div style="font-size:16px;font-weight:600;color:var(--text-title);margin-bottom:6px;">密码区域已锁定</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">
+        ${hasPwd ? '请输入安全密码查看' : '首次使用，请设置安全密码'}
+      </div>
+      <input type="password" id="lockPwdInput" placeholder="${hasPwd?'输入密码':'设置4-8位密码'}" maxlength="8" inputmode="numeric">
+      <button class="btn btn-primary" style="width:100%;max-width:200px;" onclick="verifyLockPassword()">${hasPwd?'🔓 解锁':'🔐 设置密码'}</button>
+    </div>`;
+}
+
+async function verifyLockPassword() {
+  const input = document.getElementById('lockPwdInput').value;
+  if (!input) { showToast('请输入密码'); return; }
+  const hasPwd = await getSetting('appLockPassword');
+  if (!hasPwd) {
+    // 首次设置
+    if (input.length < 4) { showToast('密码至少4位'); return; }
+    await setSetting('appLockPassword', input);
+    await setSetting('passwordUnlocked', 'true');
+    await setSetting('passwordUnlockTime', Date.now().toString());
+    showToast('✅ 密码已设置');
+    renderRecords();
+  } else {
+    if (input === hasPwd) {
+      await setSetting('passwordUnlocked', 'true');
+      await setSetting('passwordUnlockTime', Date.now().toString());
+      showToast('✅ 解锁成功');
+      renderRecords();
+    } else {
+      showToast('❌ 密码错误');
+      document.getElementById('lockPwdInput').value = '';
+    }
+  }
+}
+
+/* 添加/编辑记录弹窗 */
+function showAddRecordModal(record = null) {
+  const cat = currentRecordCat;
+  const cfg = RECORD_CATS[cat];
+  const isEdit = !!record;
+
+  let formHtml = '';
+  if (cat === 'diary') {
+    formHtml = `
+      <div class="form-group"><label>日期</label><input type="date" id="rec_date" value="${isEdit?record.date:todayStr()}"></div>
+      <div class="form-group"><label>心情</label>
+        <div class="category-pills">${MOOD_OPTIONS.map(m=>`<span class="pill ${isEdit&&record.mood===m.emoji?'active':''}" data-mood="${m.emoji}" onclick="pickMood(this)">${m.emoji} ${m.name}</span>`).join('')}</div>
+      </div>
+      <div class="form-group"><label>内容</label><textarea id="rec_content" placeholder="今天的心情...">${isEdit?escapeHtml(record.content||''):''}</textarea></div>`;
+  } else if (cat === 'password') {
+    formHtml = `
+      <div class="form-group"><label>名称</label><input type="text" id="rec_name" placeholder="如：微信、支付宝" value="${isEdit?escapeHtml(record.name||''):''}"></div>
+      <div class="form-group"><label>账号</label><input type="text" id="rec_account" placeholder="手机号/邮箱" value="${isEdit?escapeHtml(record.account||''):''}"></div>
+      <div class="form-group"><label>密码</label><input type="text" id="rec_password" placeholder="密码" value="${isEdit?escapeHtml(record.password||''):''}"></div>
+      <div class="form-group"><label>备注</label><input type="text" id="rec_note" placeholder="如：绑定的手机号" value="${isEdit?escapeHtml(record.note||''):''}"></div>`;
+  } else if (cat === 'loan') {
+    formHtml = `
+      <div class="form-group"><label>类型</label>
+        <div class="category-pills">
+          <span class="pill ${!isEdit||record.type==='lend'?'active':''}" data-loan="lend" onclick="pickLoan(this)">📤 借出</span>
+          <span class="pill ${isEdit&&record.type==='borrow'?'active':''}" data-loan="borrow" onclick="pickLoan(this)">📥 借入</span>
+        </div>
+      </div>
+      <div class="form-group"><label>对象</label><input type="text" id="rec_person" placeholder="借给谁/向谁借" value="${isEdit?escapeHtml(record.person||''):''}"></div>
+      <div class="form-group"><label>金额</label><input type="number" id="rec_amount" placeholder="0" inputmode="decimal" value="${isEdit?record.amount||'':''}"></div>
+      <div class="form-group"><label>日期</label><input type="date" id="rec_date" value="${isEdit?record.date:todayStr()}"></div>
+      <div class="form-group"><label>是否归还</label>
+        <div class="category-pills">
+          <span class="pill ${isEdit&&record.returned?'active':''}" data-ret="true" onclick="pickReturn(this)">✓ 已归还</span>
+          <span class="pill ${!isEdit||!record.returned?'active':''}" data-ret="false" onclick="pickReturn(this)">✗ 未归还</span>
+        </div>
+      </div>
+      <div class="form-group"><label>备注</label><input type="text" id="rec_note" placeholder="约定还款日期等" value="${isEdit?escapeHtml(record.note||''):''}"></div>`;
+  } else if (cat === 'brand') {
+    formHtml = `
+      <div class="form-group"><label>品牌名称</label><input type="text" id="rec_brand" placeholder="如：雅诗兰黛" value="${isEdit?escapeHtml(record.brand||''):''}"></div>
+      <div class="form-group"><label>生日日期</label><input type="date" id="rec_birthday" value="${isEdit?record.birthday||'':''}"></div>
+      <div class="form-group"><label>礼遇内容</label><input type="text" id="rec_gift" placeholder="如：赠小样+8折+双倍积分" value="${isEdit?escapeHtml(record.gift||''):''}"></div>
+      <div class="form-group"><label>备注</label><input type="text" id="rec_note" placeholder="其他信息" value="${isEdit?escapeHtml(record.note||''):''}"></div>`;
+  } else if (cat === 'social') {
+    formHtml = `
+      <div class="form-group"><label>类型</label>
+        <div class="category-pills">
+          <span class="pill ${!isEdit||record.type==='income'?'active':''}" data-social="income" onclick="pickSocial(this)">🧶 收人情</span>
+          <span class="pill ${isEdit&&record.type==='expense'?'active':''}" data-social="expense" onclick="pickSocial(this)">🎁 送人情</span>
+        </div>
+      </div>
+      <div class="form-group"><label>对象</label><input type="text" id="rec_person" placeholder="对方姓名" value="${isEdit?escapeHtml(record.person||''):''}"></div>
+      <div class="form-group"><label>事件</label><input type="text" id="rec_event" placeholder="如：结婚/满月/乔迁" value="${isEdit?escapeHtml(record.event||''):''}"></div>
+      <div class="form-group"><label>金额</label><input type="number" id="rec_amount" placeholder="0" inputmode="decimal" value="${isEdit?record.amount||'':''}"></div>
+      <div class="form-group"><label>日期</label><input type="date" id="rec_date" value="${isEdit?record.date:todayStr()}"></div>
+      <div class="form-group"><label>备注</label><input type="text" id="rec_note" placeholder="备注" value="${isEdit?escapeHtml(record.note||''):''}"></div>`;
+  }
+
+  showModal(`
+    <div class="modal-header">
+      <h2>${isEdit?'✏️ 修改':'➕ 添加'}${cfg.name}</h2>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    ${formHtml}
+    <button class="btn btn-primary btn-full" onclick="saveRecord('${cat}',${isEdit?record.id:0})">💾 保存</button>
+  `);
+
+  window._recMood = isEdit ? record.mood : '😊';
+  window._recLoanType = isEdit ? record.type : 'lend';
+  window._recReturned = isEdit ? (record.returned?'true':'false') : 'false';
+  window._recSocialType = isEdit ? record.type : 'income';
+}
+
+function pickMood(el) {
+  el.parentElement.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  window._recMood = el.dataset.mood;
+}
+function pickLoan(el) {
+  el.parentElement.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  window._recLoanType = el.dataset.loan;
+}
+function pickReturn(el) {
+  el.parentElement.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  window._recReturned = el.dataset.ret;
+}
+function pickSocial(el) {
+  el.parentElement.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  window._recSocialType = el.dataset.social;
+}
+
+async function saveRecord(cat, id) {
+  const cfg = RECORD_CATS[cat];
+  const data = { created_at: Date.now() };
+
+  if (cat === 'diary') {
+    data.date = document.getElementById('rec_date').value;
+    data.mood = window._recMood || '😊';
+    data.content = document.getElementById('rec_content').value.trim();
+    if (!data.content) { showToast('请输入内容'); return; }
+  } else if (cat === 'password') {
+    data.name = document.getElementById('rec_name').value.trim();
+    data.account = document.getElementById('rec_account').value.trim();
+    data.password = document.getElementById('rec_password').value.trim();
+    data.note = document.getElementById('rec_note').value.trim();
+    if (!data.name) { showToast('请输入名称'); return; }
+  } else if (cat === 'loan') {
+    data.type = window._recLoanType;
+    data.person = document.getElementById('rec_person').value.trim();
+    data.amount = parseFloat(document.getElementById('rec_amount').value) || 0;
+    data.date = document.getElementById('rec_date').value;
+    data.returned = window._recReturned === 'true';
+    data.note = document.getElementById('rec_note').value.trim();
+    if (!data.person) { showToast('请输入对象'); return; }
+  } else if (cat === 'brand') {
+    data.brand = document.getElementById('rec_brand').value.trim();
+    data.birthday = document.getElementById('rec_birthday').value;
+    data.gift = document.getElementById('rec_gift').value.trim();
+    data.note = document.getElementById('rec_note').value.trim();
+    if (!data.brand) { showToast('请输入品牌名称'); return; }
+  } else if (cat === 'social') {
+    data.type = window._recSocialType;
+    data.person = document.getElementById('rec_person').value.trim();
+    data.event = document.getElementById('rec_event').value.trim();
+    data.amount = parseFloat(document.getElementById('rec_amount').value) || 0;
+    data.date = document.getElementById('rec_date').value;
+    data.note = document.getElementById('rec_note').value.trim();
+    if (!data.person) { showToast('请输入对象'); return; }
+  }
+
+  if (id > 0) {
+    data.id = id;
+    await dbPut(cfg.store, data);
+    showToast('✅ 已修改');
+  } else {
+    await dbAdd(cfg.store, data);
+    showToast('✅ 已添加');
+  }
+  closeModal();
+  renderRecords();
+}
+
+async function editRecord(cat, id) {
+  const cfg = RECORD_CATS[cat];
+  const record = await dbGet(cfg.store, id);
+  showAddRecordModal(record);
+}
+
+async function deleteRecord(cat, id) {
+  if (!confirm('确定删除这条记录吗？')) return;
+  const cfg = RECORD_CATS[cat];
+  await dbDelete(cfg.store, id);
+  showToast('已删除');
+  renderRecords();
 }
 
 function showAddTaskModal(task = null) {
