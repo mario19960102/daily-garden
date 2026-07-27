@@ -1366,6 +1366,13 @@ async function initDB() {
         await dbAdd('categories', c);
       }
     }
+    // 清理已废弃的旧分类
+    const deprecatedNames = ['正餐','外卖','零售','餐饮'];
+    for (const c of cats) {
+      if (deprecatedNames.includes(c.name)) {
+        await dbDelete('categories', c.id);
+      }
+    }
   }
   // 初始化植物
   const plants = await dbGetAll('plants');
