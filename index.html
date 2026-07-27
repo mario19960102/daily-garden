@@ -1074,9 +1074,18 @@ const DEFAULT_CATEGORIES = [
   { id: 5, type: 'expense', name: '进货', icon: '📦' },
   { id: 6, type: 'expense', name: '房租', icon: '🏠' },
   { id: 7, type: 'expense', name: '水电', icon: '💡' },
-  { id: 8, type: 'expense', name: '餐饮', icon: '🍜' },
-  { id: 9, type: 'expense', name: '人工', icon: '👷' },
-  { id: 10, type: 'expense', name: '其他支出', icon: '💸' }
+  { id: 8, type: 'expense', name: '人工', icon: '👷' },
+  { id: 9, type: 'expense', name: '美食', icon: '🍜' },
+  { id: 10, type: 'expense', name: '交通', icon: '🚌' },
+  { id: 11, type: 'expense', name: '出游', icon: '✈️' },
+  { id: 12, type: 'expense', name: '日常用品', icon: '🧴' },
+  { id: 13, type: 'expense', name: '零食饮料', icon: '🧋' },
+  { id: 14, type: 'expense', name: '购物', icon: '🛍️' },
+  { id: 15, type: 'expense', name: '医疗', icon: '💊' },
+  { id: 16, type: 'expense', name: '娱乐', icon: '🎮' },
+  { id: 17, type: 'expense', name: '通讯', icon: '📱' },
+  { id: 18, type: 'expense', name: '宠物', icon: '🐱' },
+  { id: 19, type: 'expense', name: '其他支出', icon: '💸' }
 ];
 
 /* ========================================
@@ -1084,10 +1093,18 @@ const DEFAULT_CATEGORIES = [
    ======================================== */
 async function initDB() {
   await openDB();
-  // 初始化分类
+  // 初始化分类（自动补全新增的分类，老用户也能用上）
   const cats = await dbGetAll('categories');
   if (cats.length === 0) {
     for (const c of DEFAULT_CATEGORIES) await dbAdd('categories', c);
+  } else {
+    // 补全新增的分类（按 name 匹配，避免重复）
+    const existingNames = new Set(cats.map(c => c.name));
+    for (const c of DEFAULT_CATEGORIES) {
+      if (!existingNames.has(c.name)) {
+        await dbAdd('categories', c);
+      }
+    }
   }
   // 初始化植物
   const plants = await dbGetAll('plants');
@@ -1221,7 +1238,7 @@ function toggleMenu() {
       <button class="btn btn-ghost btn-full" style="color:var(--pink-cute);" onclick="confirmReset()">🗑️ 清空所有数据</button>
     </div>
     <div style="margin-top:16px;font-size:12px;color:var(--text-muted);text-align:center;">
-      🌿 每日花园 v1.0<br>建议定期导出数据备份，防止iOS清理
+      🌿 每日花园 v1.1<br>建议定期导出数据备份，防止iOS清理
     </div>
   `);
 }
