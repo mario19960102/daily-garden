@@ -712,6 +712,147 @@ html, body {
   .tabbar { max-width: 500px; margin: 0 auto; }
   .fab { right: calc(50% - 250px + 20px); }
 }
+
+/* ========== 塔防战场 ========== */
+.battle-unlock-card {
+  background: linear-gradient(135deg, #2E7D32, #1B5E20);
+  border-radius: var(--radius-card);
+  padding: 16px;
+  margin-top: 12px;
+  text-align: center;
+  color: var(--white);
+  box-shadow: 0 4px 16px rgba(46,125,50,0.4);
+  animation: battleGlow 2s ease-in-out infinite;
+}
+@keyframes battleGlow {
+  0%, 100% { box-shadow: 0 4px 16px rgba(46,125,50,0.4); }
+  50% { box-shadow: 0 4px 24px rgba(46,125,50,0.7); }
+}
+.battle-unlock-card.locked {
+  background: linear-gradient(135deg, #9E9E9E, #757575);
+  animation: none;
+  opacity: 0.7;
+}
+.battle-unlock-card .title { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+.battle-unlock-card .desc { font-size: 12px; opacity: 0.9; margin-bottom: 10px; }
+.battle-unlock-card .btn { background: var(--yellow-sun); color: var(--white); }
+.battle-unlock-card .btn:disabled { background: rgba(255,255,255,0.2); }
+
+.battle-modal { max-width: 100%; padding: 12px; }
+.battle-field {
+  background: linear-gradient(180deg, #8BC34A 0%, #7CB342 50%, #689F38 100%);
+  border-radius: 12px;
+  padding: 4px;
+  position: relative;
+  overflow: hidden;
+  border: 3px solid #558B2F;
+}
+.battle-row {
+  display: flex;
+  height: 56px;
+  border-bottom: 1px solid rgba(85,139,47,0.3);
+  position: relative;
+}
+.battle-row:last-child { border-bottom: none; }
+.battle-cell {
+  flex: 1;
+  border-right: 1px solid rgba(85,139,47,0.2);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.battle-cell:last-child { border-right: none; }
+.battle-plant {
+  font-size: 28px;
+  position: absolute;
+  z-index: 5;
+  transition: transform 0.1s;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+.battle-plant.attacking { transform: scale(1.15); }
+.battle-plant.hp-bar {
+  position: absolute;
+  bottom: -2px;
+  left: 20%;
+  right: 20%;
+  height: 3px;
+  background: rgba(255,0,0,0.3);
+  border-radius: 2px;
+}
+.battle-plant.hp-bar-fill {
+  height: 100%;
+  background: #4CAF50;
+  border-radius: 2px;
+  transition: width 0.2s;
+}
+.battle-zombie {
+  font-size: 26px;
+  position: absolute;
+  z-index: 6;
+  transition: left 0.1s linear;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+.battle-zombie .zombie-icon {
+  font-size: 14px;
+  position: absolute;
+  top: -8px;
+  right: -2px;
+}
+.battle-zombie.hp-bar {
+  position: absolute;
+  bottom: -2px;
+  left: 15%;
+  right: 15%;
+  height: 3px;
+  background: rgba(0,0,0,0.3);
+  border-radius: 2px;
+}
+.battle-projectile {
+  font-size: 14px;
+  position: absolute;
+  z-index: 7;
+  transition: left 0.1s linear;
+}
+.battle-explosion {
+  position: absolute;
+  z-index: 8;
+  font-size: 40px;
+  animation: explode 0.5s ease-out forwards;
+}
+@keyframes explode {
+  0% { transform: scale(0.5); opacity: 1; }
+  100% { transform: scale(2); opacity: 0; }
+}
+.battle-info {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 4px;
+  font-size: 13px;
+  color: var(--text-title);
+  font-weight: 600;
+}
+.battle-result {
+  text-align: center;
+  padding: 30px 20px;
+}
+.battle-result .emoji { font-size: 64px; display: block; margin-bottom: 12px; }
+.battle-result .title { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+.battle-result .reward { font-size: 16px; margin-bottom: 16px; }
+.battle-result .reward.plus { color: var(--green-primary); }
+.battle-result .reward.minus { color: var(--pink-cute); }
+.battle-skip-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 20;
+  background: rgba(0,0,0,0.4);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 4px 10px;
+  font-size: 12px;
+}
 </style>
 </head>
 <body>
@@ -759,6 +900,7 @@ html, body {
         <div class="progress-bar"><div class="progress-fill" id="planProgressFill" style="width:0%"></div></div>
         <ul class="task-list" id="taskList" style="margin-top:12px;"></ul>
       </div>
+      <div id="battleUnlockCard"></div>
     </div>
 
     <!-- 页面：记账 -->
@@ -1065,6 +1207,56 @@ const PLANTS_DATA = [
   { id: 48, name_cn: '巨型坚果', name_en: 'Giant Wall-nut', cost: 50, emoji: '🥜', desc: '巨型坚果墙，超高血量' }
 ];
 
+/* ========================================
+   植物战斗属性（按 PLANTS_DATA 的 id 映射）
+   type: shooter射击 / wall防御 / bomb爆炸 / pitcher投掷 / shroom蘑菇 / economy经济
+   ======================================== */
+const PLANT_BATTLE = {
+  // shooter 射击型
+  1:  { type: 'shooter', atk: 20, interval: 15, hp: 100, range: 9, emoji: '🟢' },  // 豌豆射手
+  8:  { type: 'shooter', atk: 40, interval: 15, hp: 100, range: 9, emoji: '🎯' },  // 双重射手
+  6:  { type: 'shooter', atk: 20, interval: 15, hp: 100, range: 9, emoji: '❄️', special: 'slow' }, // 雪豌豆
+  13: { type: 'shooter', atk: 20, interval: 15, hp: 100, range: 9, emoji: '🔱' },  // 三线射手
+  25: { type: 'shooter', atk: 80, interval: 15, hp: 100, range: 9, emoji: '🔫' },  // 机枪豌豆
+  // wall 防御型
+  4:  { type: 'wall', atk: 0, interval: 0, hp: 400, range: 0, emoji: '🥜' },   // 坚果墙
+  12: { type: 'wall', atk: 0, interval: 0, hp: 800, range: 0, emoji: '🌰' },   // 高坚果
+  17: { type: 'wall', atk: 0, interval: 0, hp: 300, range: 0, emoji: '🎃' },   // 南瓜头
+  48: { type: 'wall', atk: 0, interval: 0, hp: 1200, range: 0, emoji: '🥜' },  // 巨型坚果
+  // bomb 爆炸型（一次性）
+  3:  { type: 'bomb', atk: 300, interval: 1, hp: 1, range: 3, emoji: '🍒' },   // 樱桃炸弹
+  9:  { type: 'bomb', atk: 500, interval: 1, hp: 1, range: 9, emoji: '🌶️' },   // 火爆辣椒(整行)
+  5:  { type: 'bomb', atk: 200, interval: 1, hp: 1, range: 1, emoji: '🥔' },   // 土豆地雷
+  35: { type: 'bomb', atk: 400, interval: 1, hp: 1, range: 5, emoji: '💀' },   // 毁灭蘑菇
+  // pitcher 投掷型
+  19: { type: 'pitcher', atk: 25, interval: 20, hp: 100, range: 9, emoji: '🥬' }, // 卷心菜投手
+  22: { type: 'pitcher', atk: 40, interval: 20, hp: 100, range: 9, emoji: '🍉' }, // 西瓜投手
+  23: { type: 'pitcher', atk: 40, interval: 20, hp: 100, range: 9, emoji: '冰冰', special: 'slow' }, // 冰西瓜
+  // shroom 蘑菇型
+  31: { type: 'shroom', atk: 15, interval: 12, hp: 60, range: 3, emoji: '🍄' },  // 喷射蘑菇
+  47: { type: 'shroom', atk: 30, interval: 12, hp: 80, range: 4, emoji: '💨' },  // 大喷菇
+  27: { type: 'shroom', atk: 40, interval: 15, hp: 100, range: 3, emoji: '🍄' }, // 忧郁蘑菇
+  // economy 经济型（不参战，提供额外积分奖励）
+  2:  { type: 'economy', atk: 0, interval: 0, hp: 80, range: 0, emoji: '🌻' },   // 向日葵
+  26: { type: 'economy', atk: 0, interval: 0, hp: 80, range: 0, emoji: '🌻🌻' }, // 双子向日葵
+  24: { type: 'economy', atk: 0, interval: 0, hp: 80, range: 0, emoji: '🌼' },   // 金盏花
+};
+
+/* 僵尸类型 */
+const ZOMBIE_TYPES = [
+  { name: '普通僵尸', emoji: '🧟', hp: 100, speed: 0.3, atk: 10, icon: '' },
+  { name: '路障僵尸', emoji: '🧟', hp: 200, speed: 0.3, atk: 10, icon: '🚧' },
+  { name: '铁桶僵尸', emoji: '🧟', hp: 400, speed: 0.25, atk: 15, icon: '🪣' },
+  { name: '快速僵尸', emoji: '🧟', hp: 150, speed: 0.6, atk: 12, icon: '⚡' },
+];
+
+/* 战斗波次配置 */
+const BATTLE_WAVES = [
+  { zombies: [{ type: 0, count: 5 }], delay: 15 },
+  { zombies: [{ type: 0, count: 3 }, { type: 1, count: 5 }], delay: 20 },
+  { zombies: [{ type: 2, count: 4 }, { type: 3, count: 6 }], delay: 25 },
+];
+
 /* 默认分类 */
 const DEFAULT_CATEGORIES = [
   { id: 1, type: 'income', name: '正餐', icon: '🍽️' },
@@ -1303,6 +1495,469 @@ async function renderTasks() {
       </div>
     </li>
   `).join('');
+
+  // 检测是否解锁终极挑战
+  checkBattleUnlocked(tasks, done, total);
+}
+
+/* ========================================
+   塔防战斗系统
+   ======================================== */
+let battleState = null;
+
+async function checkBattleUnlocked(tasks, done, total) {
+  const cardEl = document.getElementById('battleUnlockCard');
+  if (!cardEl) return;
+
+  const today = todayStr();
+  const lastBattleDate = await getSetting('lastBattleDate');
+  const alreadyBattled = (lastBattleDate === today);
+  const allDone = total > 0 && done === total;
+
+  if (!allDone) {
+    cardEl.innerHTML = `
+      <div class="battle-unlock-card locked">
+        <div class="title">🧟 终极挑战未解锁</div>
+        <div class="desc">完成今日全部计划后解锁僵尸防御战</div>
+        <button class="btn" disabled>🔒 完成所有任务后开启</button>
+      </div>`;
+  } else if (alreadyBattled) {
+    cardEl.innerHTML = `
+      <div class="battle-unlock-card locked">
+        <div class="title">✅ 今日已挑战</div>
+        <div class="desc">明天完成计划后可再次挑战</div>
+      </div>`;
+  } else {
+    cardEl.innerHTML = `
+      <div class="battle-unlock-card">
+        <div class="title">🧟‍♂️ 终极挑战已解锁！</div>
+        <div class="desc">僵尸来袭！用你的植物保卫花园<br>胜利 +50 积分，失败 -20 积分</div>
+        <button class="btn" onclick="showBattleModal()">⚔️ 开始战斗</button>
+      </div>`;
+  }
+}
+
+async function showBattleModal() {
+  const plants = await dbGetAll('plants');
+  const unlocked = plants.filter(p => p.unlocked && PLANT_BATTLE[p.id]);
+
+  if (unlocked.length === 0) {
+    showModal(`
+      <div class="modal-header"><h2>⚔️ 战斗准备</h2><button class="modal-close" onclick="closeModal()">×</button></div>
+      <div class="battle-result">
+        <span class="emoji">😢</span>
+        <div class="title">没有可战斗的植物</div>
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">
+          去图鉴页用积分兑换植物<br>至少需要1株战斗植物才能迎敌
+        </div>
+        <button class="btn btn-primary" onclick="closeModal()">知道了</button>
+      </div>
+    `);
+    return;
+  }
+
+  // 初始化战斗状态
+  battleState = {
+    rows: 5, cols: 9,
+    plants: [],       // {id, plantId, row, col, hp, maxHp, lastAtk, type, atk, interval, range, emoji, special}
+    zombies: [],      // {id, row, pos(0-9), hp, maxHp, speed, atk, emoji, icon, lastMove}
+    projectiles: [],  // {id, row, pos, emoji, atk, speed}
+    explosions: [],   // {id, row, col, emoji, timer}
+    wave: 0,
+    waveTimer: 0,
+    zombieId: 0,
+    projId: 0,
+    running: false,
+    result: null,
+    speed: 1
+  };
+
+  // 自动布置植物
+  const wallPlants = unlocked.filter(p => PLANT_BATTLE[p.id].type === 'wall');
+  const shooterPlants = unlocked.filter(p => ['shooter','pitcher','shroom'].includes(PLANT_BATTLE[p.id].type));
+  const bombPlants = unlocked.filter(p => PLANT_BATTLE[p.id].type === 'bomb');
+  const economyPlants = unlocked.filter(p => PLANT_BATTLE[p.id].type === 'economy');
+
+  // 布置：economy放第1列，shooter放第2列，wall放第3列，bomb放第4列
+  for (let row = 0; row < 5; row++) {
+    let col = 0;
+    // 经济型放第1列
+    if (economyPlants.length > row) {
+      placePlant(economyPlants[row], row, 0);
+    }
+    // 射击型放第2列
+    col = 1;
+    for (let i = 0; i < shooterPlants.length && col < 2; i++) {
+      const targetRow = (row + i) % 5;
+      if (!battleState.plants.find(p => p.row === targetRow && p.col === col)) {
+        placePlant(shooterPlants[i], targetRow, col);
+      }
+    }
+    // 防御型放第3列
+    if (wallPlants.length > 0) {
+      const wp = wallPlants[row % wallPlants.length];
+      if (!battleState.plants.find(p => p.row === row && p.col === 2)) {
+        placePlant(wp, row, 2);
+      }
+    }
+    // 爆炸型放第4列
+    if (bombPlants.length > 0) {
+      const bp = bombPlants[row % bombPlants.length];
+      if (!battleState.plants.find(p => p.row === row && p.col === 3)) {
+        placePlant(bp, row, 3);
+      }
+    }
+  }
+
+  // 补充：多余的射击型植物填到剩余位置
+  const allShooter = unlocked.filter(p => ['shooter','pitcher','shroom'].includes(PLANT_BATTLE[p.id].type));
+  for (const sp of allShooter) {
+    if (battleState.plants.find(p => p.plantId === sp.id)) continue;
+    // 找空位
+    for (let row = 0; row < 5; row++) {
+      for (let col = 1; col < 4; col++) {
+        if (!battleState.plants.find(p => p.row === row && p.col === col)) {
+          placePlant(sp, row, col);
+          break;
+        }
+      }
+    }
+  }
+
+  showModal(`
+    <div class="battle-modal">
+      <button class="battle-skip-btn" onclick="endBattle('flee')">退出</button>
+      <div class="battle-info">
+        <span>🌊 第 <span id="battleWave">1</span>/3 波</span>
+        <span>🧟 剩余: <span id="battleZombieCount">0</span></span>
+        <span>🌱 植物: <span id="battlePlantCount">${battleState.plants.length}</span></span>
+      </div>
+      <div class="battle-field" id="battleField"></div>
+      <div style="display:flex;gap:8px;margin-top:8px;justify-content:center;">
+        <button class="btn btn-primary" id="battleStartBtn" onclick="startBattle()">⚔️ 开始战斗</button>
+        <button class="btn btn-ghost" id="battleSpeedBtn" onclick="toggleBattleSpeed()" style="display:none;">⏩ 2x</button>
+      </div>
+    </div>
+  `);
+
+  renderBattlefield();
+}
+
+function placePlant(plant, row, col) {
+  const b = PLANT_BATTLE[plant.id];
+  battleState.plants.push({
+    id: battleState.plants.length,
+    plantId: plant.id,
+    name: plant.name_cn,
+    row, col,
+    hp: b.hp, maxHp: b.hp,
+    lastAtk: 0,
+    type: b.type, atk: b.atk, interval: b.interval,
+    range: b.range, emoji: b.emoji || plant.emoji,
+    special: b.special
+  });
+}
+
+function renderBattlefield() {
+  const field = document.getElementById('battleField');
+  if (!field) return;
+  let html = '';
+  for (let row = 0; row < 5; row++) {
+    html += '<div class="battle-row">';
+    for (let col = 0; col < 9; col++) {
+      html += `<div class="battle-cell" data-row="${row}" data-col="${col}"></div>`;
+    }
+    html += '</div>';
+  }
+  field.innerHTML = html;
+  // 渲染植物
+  for (const p of battleState.plants) {
+    const cell = field.querySelector(`[data-row="${p.row}"][data-col="${p.col}"]`);
+    if (cell) {
+      const hpPct = (p.hp / p.maxHp * 100);
+      cell.innerHTML += `<div class="battle-plant" id="plant-${p.id}" title="${p.name}">${p.emoji}<div class="hp-bar"><div class="hp-bar-fill" style="width:${hpPct}%"></div></div></div>`;
+    }
+  }
+  // 渲染僵尸
+  for (const z of battleState.zombies) {
+    const cell = field.querySelector(`[data-row="${z.row}"][data-col="${Math.floor(z.pos)}"]`);
+    if (cell) {
+      const hpPct = (z.hp / z.maxHp * 100);
+      cell.innerHTML += `<div class="battle-zombie" id="zombie-${z.id}" style="left:${(z.pos % 1) * 100 * 0.8}%;">${z.emoji}${z.icon ? `<span class="zombie-icon">${z.icon}</span>` : ''}<div class="hp-bar"><div class="hp-bar-fill" style="width:${hpPct}%"></div></div></div>`;
+    }
+  }
+}
+
+function startBattle() {
+  document.getElementById('battleStartBtn').style.display = 'none';
+  document.getElementById('battleSpeedBtn').style.display = 'inline-flex';
+  battleState.running = true;
+  battleState.wave = 0;
+  battleState.waveTimer = 0;
+  spawnZombieWave(0);
+  battleState.tickInterval = setInterval(gameTick, 100);
+}
+
+function toggleBattleSpeed() {
+  if (battleState.speed === 1) {
+    battleState.speed = 2;
+    clearInterval(battleState.tickInterval);
+    battleState.tickInterval = setInterval(gameTick, 50);
+    document.getElementById('battleSpeedBtn').textContent = '⏩ 3x';
+  } else if (battleState.speed === 2) {
+    battleState.speed = 3;
+    clearInterval(battleState.tickInterval);
+    battleState.tickInterval = setInterval(gameTick, 33);
+    document.getElementById('battleSpeedBtn').textContent = '▶️ 1x';
+  } else {
+    battleState.speed = 1;
+    clearInterval(battleState.tickInterval);
+    battleState.tickInterval = setInterval(gameTick, 100);
+    document.getElementById('battleSpeedBtn').textContent = '⏩ 2x';
+  }
+}
+
+function spawnZombieWave(waveIdx) {
+  if (waveIdx >= BATTLE_WAVES.length) return;
+  const wave = BATTLE_WAVES[waveIdx];
+  battleState.wave = waveIdx + 1;
+  const waveEl = document.getElementById('battleWave');
+  if (waveEl) waveEl.textContent = battleState.wave;
+
+  let delay = 0;
+  for (const group of wave.zombies) {
+    for (let i = 0; i < group.count; i++) {
+      setTimeout(() => {
+        if (!battleState || !battleState.running) return;
+        const zType = ZOMBIE_TYPES[group.type];
+        battleState.zombies.push({
+          id: battleState.zombieId++,
+          row: Math.floor(Math.random() * 5),
+          pos: 8.5,
+          hp: zType.hp, maxHp: zType.hp,
+          speed: zType.speed,
+          atk: zType.atk,
+          emoji: zType.emoji,
+          icon: zType.icon,
+          lastMove: 0
+        });
+      }, delay * 1000);
+      delay += 1.5;
+    }
+  }
+}
+
+function gameTick() {
+  if (!battleState || !battleState.running) return;
+
+  // 僵尸移动
+  for (const z of battleState.zombies) {
+    if (z.hp <= 0) continue;
+    // 检查前方是否有植物
+    const blockingPlant = battleState.plants.find(p =>
+      p.hp > 0 && p.row === z.row && Math.abs(p.col - Math.floor(z.pos)) < 0.5 && p.col < z.pos
+    );
+    if (blockingPlant) {
+      // 攻击植物
+      blockingPlant.hp -= z.atk;
+      if (blockingPlant.hp <= 0) {
+        blockingPlant.hp = 0;
+        const el = document.getElementById(`plant-${blockingPlant.id}`);
+        if (el) el.style.opacity = '0.2';
+      }
+    } else {
+      // 移动
+      z.pos -= z.speed * 0.1;
+    }
+    // 检查是否到达底线
+    if (z.pos < 0) {
+      battleState.running = false;
+      endBattle('lose');
+      return;
+    }
+  }
+
+  // 植物攻击
+  for (const p of battleState.plants) {
+    if (p.hp <= 0) continue;
+    if (p.type === 'wall' || p.type === 'economy') continue;
+    p.lastAtk++;
+    if (p.lastAtk >= p.interval) {
+      p.lastAtk = 0;
+      plantAttack(p);
+    }
+    // 爆炸型植物：检测附近僵尸后引爆
+    if (p.type === 'bomb') {
+      const nearby = battleState.zombies.find(z =>
+        z.hp > 0 && z.row === p.row && Math.abs(z.pos - p.col) <= p.range
+      );
+      if (nearby) {
+        // 引爆
+        p.hp = 0;
+        const el = document.getElementById(`plant-${p.id}`);
+        if (el) el.innerHTML = '💥';
+        // 范围伤害
+        for (const z of battleState.zombies) {
+          if (z.hp > 0 && z.row === p.row && Math.abs(z.pos - p.col) <= p.range) {
+            z.hp -= p.atk;
+          }
+        }
+        showToast('💥 爆炸！');
+      }
+    }
+  }
+
+  // 投射物移动
+  for (const proj of battleState.projectiles) {
+    if (proj.dead) continue;
+    proj.pos += proj.speed * 0.1;
+    // 检查碰撞
+    const hit = battleState.zombies.find(z =>
+      z.hp > 0 && z.row === proj.row && Math.abs(z.pos - proj.pos) < 0.5 && z.pos <= proj.pos
+    );
+    if (hit) {
+      hit.hp -= proj.atk;
+      if (hit.hp <= 0) {
+        hit.hp = 0;
+      }
+      proj.dead = true;
+    }
+    if (proj.pos > 9) proj.dead = true;
+  }
+  battleState.projectiles = battleState.projectiles.filter(p => !p.dead);
+
+  // 清理死亡僵尸
+  battleState.zombies = battleState.zombies.filter(z => z.hp > 0);
+
+  // 更新UI
+  const zcEl = document.getElementById('battleZombieCount');
+  if (zcEl) zcEl.textContent = battleState.zombies.length;
+
+  renderBattlefield();
+
+  // 检查波次推进
+  if (battleState.zombies.length === 0 && battleState.wave < BATTLE_WAVES.length) {
+    battleState.waveTimer++;
+    if (battleState.waveTimer > 30) {
+      battleState.waveTimer = 0;
+      spawnZombieWave(battleState.wave);
+    }
+  }
+
+  // 检查胜利
+  if (battleState.zombies.length === 0 && battleState.wave >= BATTLE_WAVES.length) {
+    battleState.running = false;
+    endBattle('win');
+  }
+}
+
+function plantAttack(plant) {
+  if (plant.type === 'shooter' || plant.type === 'pitcher') {
+    // 检查同行是否有僵尸在射程内
+    const target = battleState.zombies.find(z =>
+      z.hp > 0 && z.row === plant.row && z.pos > plant.col && z.pos - plant.col <= plant.range
+    );
+    if (target) {
+      const emoji = plant.special === 'slow' ? '❄️' : '•';
+      battleState.projectiles.push({
+        id: battleState.projId++,
+        row: plant.row,
+        pos: plant.col + 0.5,
+        emoji: emoji,
+        atk: plant.atk,
+        speed: 2,
+        special: plant.special
+      });
+      const el = document.getElementById(`plant-${plant.id}`);
+      if (el) {
+        el.classList.add('attacking');
+        setTimeout(() => el?.classList.remove('attacking'), 100);
+      }
+    }
+  } else if (plant.type === 'shroom') {
+    // 蘑菇近战喷射
+    const target = battleState.zombies.find(z =>
+      z.hp > 0 && z.row === plant.row && Math.abs(z.pos - plant.col) <= plant.range
+    );
+    if (target) {
+      target.hp -= plant.atk;
+      const el = document.getElementById(`plant-${plant.id}`);
+      if (el) {
+        el.classList.add('attacking');
+        setTimeout(() => el?.classList.remove('attacking'), 100);
+      }
+    }
+  }
+}
+
+async function endBattle(result) {
+  if (battleState && battleState.tickInterval) {
+    clearInterval(battleState.tickInterval);
+  }
+  if (!battleState) return;
+  battleState.running = false;
+
+  const wasFlee = (result === 'flee');
+  const plants = await dbGetAll('plants');
+
+  let title, emoji, rewardText, rewardClass;
+  if (result === 'win') {
+    title = '🎉 胜利！花园保卫成功！';
+    emoji = '🏆';
+    await addPoints(50, '塔防战斗胜利奖励');
+    rewardText = '+50 积分';
+    rewardClass = 'plus';
+  } else if (result === 'lose') {
+    title = '💀 失败！僵尸突破了防线';
+    emoji = '🧟';
+    await addPoints(-20, '塔防战斗失败扣除');
+    rewardText = '-20 积分';
+    rewardClass = 'minus';
+    // 随机损失1-2株植物
+    const unlockedBattle = plants.filter(p => p.unlocked && PLANT_BATTLE[p.id]);
+    if (unlockedBattle.length > 0) {
+      const lossCount = Math.min(unlockedBattle.length, Math.random() < 0.5 ? 1 : 2);
+      const lost = [];
+      for (let i = 0; i < lossCount; i++) {
+        const idx = Math.floor(Math.random() * unlockedBattle.length);
+        const p = unlockedBattle.splice(idx, 1)[0];
+        p.unlocked = false;
+        await dbPut('plants', p);
+        lost.push(p.name_cn);
+      }
+      if (lost.length > 0) rewardText += `，损失植物: ${lost.join('、')}`;
+    }
+  } else {
+    // flee 逃跑
+    title = '🏃 撤离战场';
+    emoji = '💨';
+    rewardText = '本次不计奖惩';
+    rewardClass = '';
+  }
+
+  // 记录今日已挑战（逃跑不记录）
+  if (!wasFlee) {
+    await setSetting('lastBattleDate', todayStr());
+  }
+
+  showModal(`
+    <div class="modal-header"><h2>⚔️ 战斗结算</h2><button class="modal-close" onclick="closeModal()">×</button></div>
+    <div class="battle-result">
+      <span class="emoji">${emoji}</span>
+      <div class="title">${title}</div>
+      <div class="reward ${rewardClass}">${rewardText}</div>
+      <button class="btn btn-primary" onclick="closeBattle()">确定</button>
+    </div>
+  `);
+
+  battleState = null;
+  await updateHeaderStats();
+  renderTasks();
+}
+
+function closeBattle() {
+  closeModal();
+  if (currentPage === 'almanac') renderAlmanac();
 }
 
 function showAddTaskModal(task = null) {
@@ -1335,18 +1990,29 @@ const PLAN_TEMPLATES = [
   {
     name: '💪 减肥计划',
     tasks: [
-      { title: '一天一餐', note: '今天只吃一餐，控制热量摄入' },
-      { title: '过5点不食', note: '下午5点后不再进食' },
-      { title: '不喝饮料', note: '只喝水，不喝含糖饮料' },
-      { title: '不吃雪糕', note: '今天不吃雪糕/冰激凌' },
-      { title: '减少水果摄入', note: '控制水果量，避免糖分过高' }
+      { title: '一日一餐过5点不食', note: '今天只吃一餐，下午5点后不再进食' },
+      { title: '不吃雪糕不喝饮料', note: '今天不吃雪糕、不喝含糖饮料' },
+      { title: '水果摄入记录', note: '记录今天水果摄入量，控制糖分' }
     ]
   },
   {
-    name: '🐱 养猫计划',
+    name: '🌟 日常计划',
     tasks: [
-      { title: '给猫滴眼药水', note: '每日按时给猫猫滴眼药水' },
-      { title: '记得带猫猫打三联疫苗', note: '安排时间带猫去打三联疫苗' }
+      { title: '定8:30闹铃起床不许偷懒', note: '准时起床，不许赖床' },
+      { title: '化个美美的妆', note: '今天也要漂漂亮亮的' },
+      { title: '许愿打麻将赢钱', note: '🀄 财神保佑，今天手气爆棚' },
+      { title: '吃一颗鱼油和叶黄素', note: '每日保健品记得吃' },
+      { title: '给多肉滴眼药水', note: '按时给多肉滴眼药水' },
+      { title: '带多肉打三联疫苗+给自己打疫苗', note: '安排时间带多肉去打三联疫苗，自己也要打疫苗' },
+      { title: '合理计划金钱支出，大额支出💰不允许', note: '今天控制消费，禁止大额支出' }
+    ]
+  },
+  {
+    name: '💼 工作计划',
+    tasks: [
+      { title: '发五条朋友圈广告🪧', note: '今日朋友圈营销任务，发满5条' },
+      { title: '记录顾客们的生日🎂', note: '整理记录顾客生日信息，方便后续维护' },
+      { title: '整理修丽可的货品余量对比价格', note: '盘点修丽可库存，对比各渠道价格' }
     ]
   }
 ];
