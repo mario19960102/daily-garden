@@ -625,6 +625,19 @@ html, body {
   flex-wrap: wrap;
   gap: 6px;
 }
+.category-group {
+  margin-bottom: 10px;
+}
+.category-group-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--green-dark);
+  margin-bottom: 6px;
+  padding-left: 2px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
 .pill {
   padding: 6px 12px;
   border-radius: 16px;
@@ -1302,27 +1315,38 @@ const BATTLE_WAVES = [
 
 /* 默认分类 */
 const DEFAULT_CATEGORIES = [
-  { id: 1, type: 'income', name: '正餐', icon: '🍽️' },
-  { id: 2, type: 'income', name: '外卖', icon: '🥡' },
-  { id: 3, type: 'income', name: '零售', icon: '🛒' },
-  { id: 4, type: 'income', name: '麻将', icon: '🀄' },
-  { id: 5, type: 'income', name: '其他收入', icon: '💰' },
-  { id: 6, type: 'expense', name: '进货', icon: '📦' },
-  { id: 7, type: 'expense', name: '房租', icon: '🏠' },
-  { id: 8, type: 'expense', name: '水电', icon: '💡' },
-  { id: 9, type: 'expense', name: '人工', icon: '👷' },
-  { id: 10, type: 'expense', name: '美食', icon: '🍜' },
-  { id: 11, type: 'expense', name: '交通', icon: '🚌' },
-  { id: 12, type: 'expense', name: '出游', icon: '✈️' },
-  { id: 13, type: 'expense', name: '日常用品', icon: '🧴' },
-  { id: 14, type: 'expense', name: '零食饮料', icon: '🧋' },
-  { id: 15, type: 'expense', name: '购物', icon: '🛍️' },
-  { id: 16, type: 'expense', name: '医疗', icon: '💊' },
-  { id: 17, type: 'expense', name: '娱乐', icon: '🎮' },
-  { id: 18, type: 'expense', name: '通讯', icon: '📱' },
-  { id: 19, type: 'expense', name: '宠物', icon: '🐱' },
-  { id: 20, type: 'expense', name: '麻将', icon: '🀄' },
-  { id: 21, type: 'expense', name: '其他支出', icon: '💸' }
+  // 收入 - 美妆收入大类
+  { id: 1, type: 'income', name: '护肤品销售', icon: '🧴', group: '美妆收入' },
+  { id: 2, type: 'income', name: '彩妆销售', icon: '💄', group: '美妆收入' },
+  { id: 3, type: 'income', name: '美容服务', icon: '💆', group: '美妆收入' },
+  { id: 4, type: 'income', name: '美甲服务', icon: '💅', group: '美妆收入' },
+  { id: 5, type: 'income', name: '修丽可销售', icon: '🧪', group: '美妆收入' },
+  { id: 6, type: 'income', name: '其他美妆', icon: '✨', group: '美妆收入' },
+  // 收入 - 麻将馆收入大类
+  { id: 7, type: 'income', name: '台费收入', icon: '🀄', group: '麻将馆收入' },
+  { id: 8, type: 'income', name: '茶水饮料', icon: '🍵', group: '麻将馆收入' },
+  { id: 9, type: 'income', name: '零食小吃', icon: '🍿', group: '麻将馆收入' },
+  { id: 10, type: 'income', name: '包厢费', icon: '🚪', group: '麻将馆收入' },
+  { id: 11, type: 'income', name: '其他麻将馆', icon: '💰', group: '麻将馆收入' },
+  // 收入 - 其他
+  { id: 12, type: 'income', name: '其他收入', icon: '💵', group: '其他' },
+  // 支出
+  { id: 13, type: 'expense', name: '进货', icon: '📦' },
+  { id: 14, type: 'expense', name: '房租', icon: '🏠' },
+  { id: 15, type: 'expense', name: '水电', icon: '💡' },
+  { id: 16, type: 'expense', name: '人工', icon: '👷' },
+  { id: 17, type: 'expense', name: '美食', icon: '🍜' },
+  { id: 18, type: 'expense', name: '交通', icon: '🚌' },
+  { id: 19, type: 'expense', name: '出游', icon: '✈️' },
+  { id: 20, type: 'expense', name: '日常用品', icon: '🧴' },
+  { id: 21, type: 'expense', name: '零食饮料', icon: '🧋' },
+  { id: 22, type: 'expense', name: '购物', icon: '🛍️' },
+  { id: 23, type: 'expense', name: '医疗', icon: '💊' },
+  { id: 24, type: 'expense', name: '娱乐', icon: '🎮' },
+  { id: 25, type: 'expense', name: '通讯', icon: '📱' },
+  { id: 26, type: 'expense', name: '宠物', icon: '🐱' },
+  { id: 27, type: 'expense', name: '麻将', icon: '🀄' },
+  { id: 28, type: 'expense', name: '其他支出', icon: '💸' }
 ];
 
 /* ========================================
@@ -2296,9 +2320,7 @@ async function showAddTxModal() {
     </div>
     <div class="form-group">
       <label>分类</label>
-      <div class="category-pills" id="txCategoryPills">
-        ${incomeCats.map(c => `<span class="pill" data-cat="${c.id}" onclick="selectCategory(this)">${c.icon} ${c.name}</span>`).join('')}
-      </div>
+      <div id="txCategoryPills">${renderIncomeCategories(incomeCats)}</div>
     </div>
     <div class="form-group">
       <label>备注（可选）</label>
@@ -2319,14 +2341,36 @@ async function showAddTxModal() {
   }
 }
 
+function renderIncomeCategories(incomeCats) {
+  // 按 group 分组展示
+  const groups = {};
+  incomeCats.forEach(c => {
+    const g = c.group || '其他';
+    if (!groups[g]) groups[g] = [];
+    groups[g].push(c);
+  });
+  const groupEmojis = {'美妆收入':'💄','麻将馆收入':'🀄','其他':'💵'};
+  let html = '';
+  for (const [gName, gCats] of Object.entries(groups)) {
+    html += `<div class="category-group">`;
+    html += `<div class="category-group-title">${groupEmojis[gName]||'📁'} ${gName}</div>`;
+    html += `<div class="category-pills">${gCats.map(c => `<span class="pill" data-cat="${c.id}" onclick="selectCategory(this)">${c.icon} ${c.name}</span>`).join('')}</div>`;
+    html += `</div>`;
+  }
+  return html;
+}
+
 function selectTxType(type) {
   window._txType = type;
   document.getElementById('pill-income').classList.toggle('active', type === 'income');
   document.getElementById('pill-expense').classList.toggle('active', type === 'expense');
-  const cats = type === 'income' ? window._incomeCats : window._expenseCats;
   const container = document.getElementById('txCategoryPills');
-  container.innerHTML = cats.map(c => `<span class="pill" data-cat="${c.id}" onclick="selectCategory(this)">${c.icon} ${c.name}</span>`).join('');
-  window._txCategoryId = cats[0]?.id;
+  if (type === 'income') {
+    container.innerHTML = renderIncomeCategories(window._incomeCats);
+  } else {
+    container.innerHTML = `<div class="category-pills">${window._expenseCats.map(c => `<span class="pill" data-cat="${c.id}" onclick="selectCategory(this)">${c.icon} ${c.name}</span>`).join('')}</div>`;
+  }
+  window._txCategoryId = (type === 'income' ? window._incomeCats : window._expenseCats)[0]?.id;
   if (window._txCategoryId) {
     container.querySelector(`.pill[data-cat="${window._txCategoryId}"]`)?.classList.add('active');
   }
