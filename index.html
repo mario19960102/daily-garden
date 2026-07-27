@@ -1,0 +1,1908 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="每日花园">
+<meta name="theme-color" content="#7CB342">
+<title>🌿 每日花园</title>
+<link rel="manifest" href="manifest.json">
+<style>
+/* ========== CSS 变量：绿色可爱风配色 ========== */
+:root {
+  --green-primary: #7CB342;
+  --green-light: #8BC34A;
+  --green-lighter: #AED581;
+  --green-dark: #558B2F;
+  --green-darker: #33691E;
+  --green-bg: #F1F8E9;
+  --yellow-sun: #FFC107;
+  --yellow-light: #FFF8E1;
+  --blue-water: #4FC3F7;
+  --blue-light: #E1F5FE;
+  --blue-deep: #0288D1;
+  --pink-cute: #FF8A95;
+  --text-title: #33691E;
+  --text-body: #558B2F;
+  --text-muted: #9E9E9E;
+  --white: #FFFFFF;
+  --card-bg: #FFFFFF;
+  --shadow-soft: 0 4px 12px rgba(124,179,66,0.18);
+  --shadow-card: 0 2px 8px rgba(0,0,0,0.06);
+  --radius-card: 16px;
+  --radius-btn: 12px;
+  --radius-sm: 8px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+  background: var(--green-bg);
+  color: var(--text-body);
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+/* ========== App 容器 ========== */
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: -webkit-fill-available;
+}
+
+/* ========== 顶部状态栏 ========== */
+.header {
+  background: linear-gradient(135deg, var(--green-primary), var(--green-light));
+  color: var(--white);
+  padding: calc(var(--safe-top) + 12px) 16px 14px;
+  box-shadow: 0 2px 8px rgba(124,179,66,0.3);
+  z-index: 10;
+}
+.header-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.header-title h1 {
+  font-size: 20px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.header-stats {
+  display: flex;
+  gap: 12px;
+  margin-top: 10px;
+  font-size: 13px;
+}
+.stat-chip {
+  background: rgba(255,255,255,0.25);
+  padding: 4px 10px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  backdrop-filter: blur(4px);
+}
+.stat-chip .num { font-weight: 700; font-size: 15px; }
+
+/* ========== 主内容区 ========== */
+.main {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding: 12px 14px 100px;
+  position: relative;
+}
+
+.page { display: none; }
+.page.active { display: block; animation: fadeIn 0.3s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ========== 底部导航 ========== */
+.tabbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  background: var(--white);
+  padding-bottom: var(--safe-bottom);
+  box-shadow: 0 -2px 12px rgba(0,0,0,0.08);
+  z-index: 100;
+}
+.tab {
+  flex: 1;
+  text-align: center;
+  padding: 8px 0 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  background: none;
+  font-family: inherit;
+}
+.tab .icon { font-size: 24px; display: block; line-height: 1.2; }
+.tab .label { font-size: 11px; color: var(--text-muted); }
+.tab.active .label { color: var(--green-primary); font-weight: 600; }
+.tab.active .icon { transform: scale(1.15); transition: transform 0.2s; }
+
+/* ========== 通用组件 ========== */
+.card {
+  background: var(--card-bg);
+  border-radius: var(--radius-card);
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow-card);
+}
+.card-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-title);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.btn {
+  border: none;
+  border-radius: var(--radius-btn);
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.btn-primary { background: var(--green-primary); color: var(--white); }
+.btn-primary:active { background: var(--green-dark); transform: scale(0.97); }
+.btn-yellow { background: var(--yellow-sun); color: var(--white); }
+.btn-blue { background: var(--blue-water); color: var(--white); }
+.btn-ghost { background: var(--green-bg); color: var(--green-dark); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.fab {
+  position: fixed;
+  right: 20px;
+  bottom: calc(80px + var(--safe-bottom));
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--green-primary);
+  color: var(--white);
+  border: none;
+  font-size: 26px;
+  box-shadow: 0 4px 16px rgba(124,179,66,0.4);
+  cursor: pointer;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+.fab:active { transform: scale(0.9); }
+
+/* ========== 日期选择条 ========== */
+.date-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  background: var(--white);
+  border-radius: var(--radius-btn);
+  padding: 8px 12px;
+  box-shadow: var(--shadow-card);
+}
+.date-bar .date-nav {
+  background: var(--green-bg);
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 16px;
+  color: var(--green-dark);
+  cursor: pointer;
+}
+.date-bar .date-display {
+  font-weight: 600;
+  color: var(--text-title);
+  font-size: 15px;
+}
+.date-bar .today-tag {
+  font-size: 11px;
+  background: var(--green-primary);
+  color: var(--white);
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-left: 6px;
+}
+
+/* ========== 进度条 ========== */
+.progress-bar {
+  height: 8px;
+  background: var(--green-bg);
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 8px 0;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--green-light), var(--green-primary));
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+.progress-text {
+  font-size: 13px;
+  color: var(--text-muted);
+  display: flex;
+  justify-content: space-between;
+}
+
+/* ========== 任务列表 ========== */
+.task-list { list-style: none; }
+.task-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--white);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  margin-bottom: 8px;
+  box-shadow: var(--shadow-card);
+  transition: all 0.2s;
+}
+.task-item.done { opacity: 0.55; }
+.task-item.done .task-title { text-decoration: line-through; }
+.task-checkbox {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--green-lighter);
+  border-radius: 50%;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  background: var(--white);
+  transition: all 0.2s;
+}
+.task-item.done .task-checkbox {
+  background: var(--green-primary);
+  border-color: var(--green-primary);
+  color: var(--white);
+}
+.task-content { flex: 1; min-width: 0; }
+.task-title { font-size: 15px; color: var(--text-title); font-weight: 500; word-break: break-word; }
+.task-note { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.task-actions { display: flex; gap: 6px; }
+.task-actions button {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px;
+}
+.task-points {
+  font-size: 11px;
+  color: var(--yellow-sun);
+  background: var(--yellow-light);
+  padding: 2px 6px;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+/* ========== 空状态 ========== */
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-muted);
+}
+.empty-state .emoji { font-size: 48px; display: block; margin-bottom: 8px; }
+.empty-state .text { font-size: 14px; }
+
+/* ========== 记账模块 ========== */
+.finance-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.finance-card {
+  background: var(--white);
+  border-radius: var(--radius-btn);
+  padding: 12px 8px;
+  text-align: center;
+  box-shadow: var(--shadow-card);
+}
+.finance-card .label { font-size: 11px; color: var(--text-muted); }
+.finance-card .amount { font-size: 16px; font-weight: 700; margin-top: 4px; }
+.finance-card.income .amount { color: var(--green-primary); }
+.finance-card.expense .amount { color: var(--pink-cute); }
+.finance-card.profit .amount { color: var(--blue-deep); }
+
+.tx-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--white);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  margin-bottom: 8px;
+  box-shadow: var(--shadow-card);
+}
+.tx-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.tx-icon.income { background: var(--green-bg); }
+.tx-icon.expense { background: #FCE4EC; }
+.tx-content { flex: 1; min-width: 0; }
+.tx-category { font-size: 14px; font-weight: 600; color: var(--text-title); }
+.tx-note { font-size: 12px; color: var(--text-muted); }
+.tx-amount { font-weight: 700; font-size: 15px; }
+.tx-amount.income { color: var(--green-primary); }
+.tx-amount.expense { color: var(--pink-cute); }
+
+/* ========== 图鉴模块 ========== */
+.plants-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.plant-card {
+  background: var(--white);
+  border-radius: var(--radius-btn);
+  padding: 10px 6px;
+  text-align: center;
+  box-shadow: var(--shadow-card);
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+.plant-card:active { transform: scale(0.95); }
+.plant-card.locked { opacity: 0.5; filter: grayscale(0.7); }
+.plant-card.locked .plant-emoji::after { content: "🔒"; position: absolute; font-size: 20px; }
+.plant-emoji { font-size: 36px; display: block; margin-bottom: 4px; position: relative; }
+.plant-name { font-size: 12px; font-weight: 600; color: var(--text-title); }
+.plant-cost {
+  font-size: 11px;
+  color: var(--yellow-sun);
+  background: var(--yellow-light);
+  padding: 2px 6px;
+  border-radius: 8px;
+  display: inline-block;
+  margin-top: 4px;
+  font-weight: 600;
+}
+.plant-card.unlocked { border: 2px solid var(--green-primary); }
+.plant-card.unlocked::after {
+  content: "✓";
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  color: var(--green-primary);
+  font-weight: 700;
+  font-size: 14px;
+}
+
+/* ========== 海豚模块 ========== */
+.dolphin-page {
+  position: relative;
+  min-height: calc(100vh - 200px);
+  background: linear-gradient(180deg, #81D4FA 0%, #4FC3F7 40%, #0288D1 100%);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+.dolphin-svg-container {
+  position: relative;
+  width: 100%;
+  height: 320px;
+  overflow: hidden;
+}
+.dolphin-svg {
+  position: absolute;
+  width: 120px;
+  animation: dolphinSwim 8s ease-in-out infinite, dolphinFloat 2.5s ease-in-out infinite;
+  cursor: pointer;
+  transition: transform 0.3s;
+}
+.dolphin-svg:active { transform: scale(1.1); }
+@keyframes dolphinSwim {
+  0% { left: -10%; transform: scaleX(1); }
+  45% { left: 80%; transform: scaleX(1); }
+  50% { left: 80%; transform: scaleX(-1); }
+  95% { left: -10%; transform: scaleX(-1); }
+  100% { left: -10%; transform: scaleX(1); }
+}
+@keyframes dolphinFloat {
+  0%, 100% { top: 80px; }
+  50% { top: 120px; }
+}
+.bubble {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.5);
+  animation: bubbleRise 3s ease-out infinite;
+}
+@keyframes bubbleRise {
+  0% { bottom: 20px; opacity: 0.8; transform: scale(0.5); }
+  100% { bottom: 280px; opacity: 0; transform: scale(1.5); }
+}
+.dolphin-stats {
+  background: rgba(255,255,255,0.95);
+  border-radius: var(--radius-card);
+  padding: 14px;
+  margin: 12px;
+}
+.dolphin-stats-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+.dolphin-stats-row .label { color: var(--text-muted); }
+.dolphin-stats-row .value { font-weight: 600; color: var(--text-title); }
+.exp-bar {
+  height: 8px;
+  background: var(--blue-light);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+.exp-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--blue-water), var(--blue-deep));
+  border-radius: 4px;
+  transition: width 0.5s;
+}
+.feed-buttons {
+  display: flex;
+  gap: 8px;
+  padding: 0 12px 12px;
+}
+.feed-btn {
+  flex: 1;
+  background: rgba(255,255,255,0.95);
+  border: none;
+  border-radius: var(--radius-btn);
+  padding: 10px 4px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.feed-btn:active { transform: scale(0.95); }
+.feed-btn .emoji { font-size: 24px; display: block; }
+.feed-btn .name { font-size: 12px; color: var(--text-title); font-weight: 600; }
+.feed-btn .cost { font-size: 11px; color: var(--yellow-sun); }
+.feed-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.mood-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(255,255,255,0.9);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  z-index: 5;
+}
+
+/* ========== 模态框 ========== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 200;
+  display: none;
+  align-items: flex-end;
+  justify-content: center;
+  animation: fadeIn 0.2s;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: var(--white);
+  border-radius: 20px 20px 0 0;
+  width: 100%;
+  max-width: 500px;
+  padding: 20px 16px calc(var(--safe-bottom) + 20px);
+  max-height: 85vh;
+  overflow-y: auto;
+  animation: slideUp 0.3s ease;
+}
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.modal-header h2 { font-size: 18px; color: var(--text-title); }
+.modal-close {
+  background: var(--green-bg);
+  border: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  font-size: 18px;
+  cursor: pointer;
+  color: var(--text-muted);
+}
+.form-group { margin-bottom: 14px; }
+.form-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-title);
+  margin-bottom: 6px;
+}
+.form-group input, .form-group select, .form-group textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 2px solid var(--green-lighter);
+  border-radius: var(--radius-sm);
+  font-size: 15px;
+  font-family: inherit;
+  background: var(--white);
+  color: var(--text-title);
+}
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+  outline: none;
+  border-color: var(--green-primary);
+}
+.form-group textarea { resize: vertical; min-height: 60px; }
+.form-row { display: flex; gap: 8px; }
+.form-row .form-group { flex: 1; }
+.btn-full { width: 100%; justify-content: center; }
+
+.category-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.pill {
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 13px;
+  border: 2px solid var(--green-lighter);
+  background: var(--white);
+  cursor: pointer;
+  color: var(--text-body);
+}
+.pill.active { background: var(--green-primary); color: var(--white); border-color: var(--green-primary); }
+
+/* ========== Toast ========== */
+.toast {
+  position: fixed;
+  top: calc(var(--safe-top) + 60px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.8);
+  color: var(--white);
+  padding: 10px 20px;
+  border-radius: 20px;
+  font-size: 14px;
+  z-index: 300;
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.toast.show { opacity: 1; }
+
+/* ========== 引导提示 ========== */
+.guide-banner {
+  background: var(--yellow-light);
+  border: 1px solid var(--yellow-sun);
+  border-radius: var(--radius-btn);
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: var(--text-title);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.guide-banner .close-guide {
+  margin-left: auto;
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: var(--text-muted);
+}
+
+/* ========== 图表 ========== */
+.chart-container {
+  background: var(--white);
+  border-radius: var(--radius-card);
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow-card);
+}
+.bar-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 120px;
+  margin-top: 12px;
+}
+.bar {
+  flex: 1;
+  background: var(--green-light);
+  border-radius: 4px 4px 0 0;
+  min-height: 4px;
+  position: relative;
+  transition: height 0.5s;
+}
+.bar.expense-bar { background: var(--pink-cute); }
+.bar-label {
+  position: absolute;
+  bottom: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* ========== 我的花园 ========== */
+.garden-view {
+  background: linear-gradient(135deg, #F1F8E9, #C8E6C9);
+  border-radius: var(--radius-card);
+  padding: 16px;
+  margin-bottom: 12px;
+  min-height: 100px;
+}
+.garden-plants {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.garden-plant {
+  font-size: 32px;
+  animation: plantSway 3s ease-in-out infinite;
+}
+@keyframes plantSway {
+  0%, 100% { transform: rotate(-3deg); }
+  50% { transform: rotate(3deg); }
+}
+
+/* 点数日志 */
+.points-log-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--green-bg);
+  font-size: 13px;
+}
+.points-log-item:last-child { border-bottom: none; }
+.points-log-item .reason { color: var(--text-body); }
+.points-log-item .change { font-weight: 700; }
+.points-log-item .change.plus { color: var(--green-primary); }
+.points-log-item .change.minus { color: var(--pink-cute); }
+
+/* 响应式 */
+@media (min-width: 600px) {
+  .main { max-width: 500px; margin: 0 auto; width: 100%; }
+  .tabbar { max-width: 500px; margin: 0 auto; }
+  .fab { right: calc(50% - 250px + 20px); }
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- 顶部状态栏 -->
+  <div class="header">
+    <div class="header-title">
+      <h1>🌿 每日花园</h1>
+      <button class="btn btn-ghost" style="font-size:13px;padding:6px 12px;" onclick="toggleMenu()">☰</button>
+    </div>
+    <div class="header-stats">
+      <div class="stat-chip">☀️ <span class="num" id="headerPoints">0</span> 积分</div>
+      <div class="stat-chip">🐬 Lv.<span class="num" id="headerDolphinLv">1</span></div>
+      <div class="stat-chip">📅 <span class="num" id="headerDate">--</span></div>
+    </div>
+  </div>
+
+  <!-- 主内容区 -->
+  <div class="main">
+    <!-- 引导提示 -->
+    <div class="guide-banner" id="guideBanner">
+      <span>💡</span>
+      <span>点击「分享→添加到主屏幕」，像APP一样使用！</span>
+      <button class="close-guide" onclick="document.getElementById('guideBanner').style.display='none'">×</button>
+    </div>
+
+    <!-- 页面：每日计划 -->
+    <div class="page active" id="page-plan">
+      <div class="date-bar">
+        <button class="date-nav" onclick="changeDate(-1)">‹</button>
+        <div>
+          <span class="date-display" id="planDateDisplay">--</span>
+          <span class="today-tag" id="planTodayTag" style="display:none;">今天</span>
+        </div>
+        <button class="date-nav" onclick="changeDate(1)">›</button>
+      </div>
+      <div class="card">
+        <div class="card-title">
+          <span>📋 今日计划</span>
+          <span style="font-size:13px;color:var(--text-muted);" id="planProgressText">0/0</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" id="planProgressFill" style="width:0%"></div></div>
+        <ul class="task-list" id="taskList" style="margin-top:12px;"></ul>
+      </div>
+    </div>
+
+    <!-- 页面：记账 -->
+    <div class="page" id="page-finance">
+      <div class="date-bar">
+        <button class="date-nav" onclick="changeFinanceDate(-1)">‹</button>
+        <div><span class="date-display" id="financeDateDisplay">--</span></div>
+        <button class="date-nav" onclick="changeFinanceDate(1)">›</button>
+      </div>
+      <div class="finance-summary">
+        <div class="finance-card income">
+          <div class="label">💰 收入</div>
+          <div class="amount" id="totalIncome">¥0</div>
+        </div>
+        <div class="finance-card expense">
+          <div class="label">💸 支出</div>
+          <div class="amount" id="totalExpense">¥0</div>
+        </div>
+        <div class="finance-card profit">
+          <div class="label">📊 净利润</div>
+          <div class="amount" id="totalProfit">¥0</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">
+          <span>📒 收支记录</span>
+          <button class="btn btn-ghost" style="font-size:12px;padding:4px 10px;" onclick="toggleChart()">📊 统计</button>
+        </div>
+        <div id="chartView" style="display:none;">
+          <div class="chart-container">
+            <div class="card-title" style="font-size:14px;">近7天收支</div>
+            <div class="bar-chart" id="weekChart"></div>
+          </div>
+        </div>
+        <div id="txList"></div>
+      </div>
+    </div>
+
+    <!-- 页面：图鉴 -->
+    <div class="page" id="page-almanac">
+      <div class="card">
+        <div class="card-title">
+          <span>🌱 植物图鉴</span>
+          <span style="font-size:13px;color:var(--yellow-sun);font-weight:700;">☀️ <span id="almanacPoints">0</span></span>
+        </div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">
+          已收集 <span id="unlockedCount" style="color:var(--green-primary);font-weight:700;">0</span> / <span id="totalPlants">48</span> 种植物
+        </div>
+        <div class="plants-grid" id="plantsGrid"></div>
+      </div>
+      <div class="garden-view">
+        <div class="card-title" style="font-size:15px;">🌻 我的花园</div>
+        <div class="garden-plants" id="gardenPlants">
+          <div class="empty-state" style="padding:20px;"><span class="text">还没有植物，去图鉴兑换吧！</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span>📜 积分日志</span></div>
+        <div id="pointsLog"></div>
+      </div>
+    </div>
+
+    <!-- 页面：海豚 -->
+    <div class="page" id="page-dolphin">
+      <div class="dolphin-page">
+        <div class="mood-badge" id="moodBadge">😴 悠闲</div>
+        <div class="dolphin-svg-container" id="dolphinContainer">
+          <!-- 海豚 SVG 由 JS 注入 -->
+        </div>
+        <div class="dolphin-stats">
+          <div class="dolphin-stats-row">
+            <span class="label">🐬 等级</span>
+            <span class="value">Lv.<span id="dolphinLv">1</span></span>
+          </div>
+          <div class="dolphin-stats-row">
+            <span class="label">✨ 经验</span>
+            <span class="value"><span id="dolphinExp">0</span>/<span id="dolphinExpMax">100</span></span>
+          </div>
+          <div class="exp-bar"><div class="exp-fill" id="expFill" style="width:0%"></div></div>
+          <div class="dolphin-stats-row" style="margin-top:8px;">
+            <span class="label">🍖 饱食度</span>
+            <span class="value"><span id="dolphinFullness">80</span>%</span>
+          </div>
+          <div class="exp-bar"><div class="exp-fill" id="fullnessFill" style="width:80%;background:linear-gradient(90deg,var(--yellow-sun),#FF6F00);"></div></div>
+          <div class="dolphin-stats-row" style="margin-top:8px;">
+            <span class="label">⚖️ 体重</span>
+            <span class="value"><span id="dolphinWeight">30</span>kg</span>
+          </div>
+          <div class="dolphin-stats-row">
+            <span class="label">📅 陪伴天数</span>
+            <span class="value"><span id="dolphinDays">1</span> 天</span>
+          </div>
+        </div>
+        <div class="feed-buttons">
+          <button class="feed-btn" onclick="feedDolphin('fish')">
+            <span class="emoji">🐟</span>
+            <span class="name">小鱼</span>
+            <span class="cost">10积分</span>
+          </button>
+          <button class="feed-btn" onclick="feedDolphin('shrimp')">
+            <span class="emoji">🦐</span>
+            <span class="name">小虾</span>
+            <span class="cost">20积分</span>
+          </button>
+          <button class="feed-btn" onclick="feedDolphin('squid')">
+            <span class="emoji">🦑</span>
+            <span class="name">章鱼</span>
+            <span class="cost">50积分</span>
+          </button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">🐬 海豚档案</div>
+        <div style="font-size:13px;color:var(--text-body);line-height:1.8;" id="dolphinProfile">
+          这是一只可爱的小海豚，完成每日计划获得积分，喂养它让它成长吧！
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 浮动添加按钮 -->
+  <button class="fab" id="fab" onclick="onFabClick()">+</button>
+
+  <!-- 底部导航 -->
+  <div class="tabbar">
+    <button class="tab active" data-page="plan" onclick="switchPage('plan')">
+      <span class="icon">📅</span><span class="label">计划</span>
+    </button>
+    <button class="tab" data-page="finance" onclick="switchPage('finance')">
+      <span class="icon">💰</span><span class="label">记账</span>
+    </button>
+    <button class="tab" data-page="almanac" onclick="switchPage('almanac')">
+      <span class="icon">🌱</span><span class="label">图鉴</span>
+    </button>
+    <button class="tab" data-page="dolphin" onclick="switchPage('dolphin')">
+      <span class="icon">🐬</span><span class="label">海豚</span>
+    </button>
+  </div>
+</div>
+
+<!-- 模态框容器 -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modalContent"></div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ========================================
+   数据层：IndexedDB 封装
+   ======================================== */
+const DB_NAME = 'DailyGardenDB';
+const DB_VERSION = 1;
+let db = null;
+
+const STORES = {
+  tasks: { keyPath: 'id', indexes: ['plan_date'] },
+  transactions: { keyPath: 'id', indexes: ['date'] },
+  categories: { keyPath: 'id', indexes: ['type'] },
+  plants: { keyPath: 'id', indexes: ['unlocked'] },
+  dolphin: { keyPath: 'id' },
+  points_log: { keyPath: 'id', indexes: ['created_at'] },
+  settings: { keyPath: 'key' }
+};
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onerror = () => reject(req.error);
+    req.onsuccess = () => { db = req.result; resolve(db); };
+    req.onupgradeneeded = (e) => {
+      const d = e.target.result;
+      Object.entries(STORES).forEach(([name, cfg]) => {
+        if (!d.objectStoreNames.contains(name)) {
+          const store = d.createObjectStore(name, { keyPath: cfg.keyPath, autoIncrement: true });
+          (cfg.indexes || []).forEach(idx => store.createIndex(idx, idx, { unique: false }));
+        }
+      });
+    };
+  });
+}
+
+function dbAdd(store, data) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(store, 'readwrite');
+    const req = tx.objectStore(store).add(data);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function dbGet(store, id) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(store, 'readonly');
+    const req = tx.objectStore(store).get(id);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function dbGetAll(store) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(store, 'readonly');
+    const req = tx.objectStore(store).getAll();
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function dbGetByIndex(store, indexName, value) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(store, 'readonly');
+    const idx = tx.objectStore(store).index(indexName);
+    const req = idx.getAll(value);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function dbPut(store, data) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(store, 'readwrite');
+    const req = tx.objectStore(store).put(data);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function dbDelete(store, id) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(store, 'readwrite');
+    const req = tx.objectStore(store).delete(id);
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function dbClear(store) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(store, 'readwrite');
+    const req = tx.objectStore(store).clear();
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+}
+
+/* ========================================
+   植物图鉴数据（初代原版48种）
+   ======================================== */
+const PLANTS_DATA = [
+  // 白天关卡植物
+  { id: 1, name_cn: '豌豆射手', name_en: 'Peashooter', cost: 100, emoji: '🟢', desc: '向前发射豌豆攻击僵尸，基础攻击植物' },
+  { id: 2, name_cn: '向日葵', name_en: 'Sunflower', cost: 50, emoji: '🌻', desc: '产生阳光的经济核心植物' },
+  { id: 3, name_cn: '樱桃炸弹', name_en: 'Cherry Bomb', cost: 150, emoji: '🍒', desc: '3x3范围爆炸，一次性消灭僵尸' },
+  { id: 4, name_cn: '坚果墙', name_en: 'Wall-nut', cost: 50, emoji: '🥜', desc: '高血量阻挡僵尸前进' },
+  { id: 5, name_cn: '土豆地雷', name_en: 'Potato Mine', cost: 25, emoji: '🥔', desc: '埋伏地下，僵尸踩中即爆炸' },
+  { id: 6, name_cn: '雪豌豆', name_en: 'Snow Pea', cost: 175, emoji: '❄️', desc: '发射冰豌豆，减速僵尸' },
+  { id: 7, name_cn: '食人花', name_en: 'Chomper', cost: 150, emoji: '🪲', desc: '一口吞掉僵尸，消化需时间' },
+  { id: 8, name_cn: '双重射手', name_en: 'Repeater', cost: 200, emoji: '🎯', desc: '一次发射两颗豌豆' },
+  { id: 9, name_cn: '火爆辣椒', name_en: 'Jalapeno', cost: 125, emoji: '🌶️', desc: '烧毁整行僵尸' },
+  { id: 10, name_cn: '荆棘', name_en: 'Spikeweed', cost: 100, emoji: '🌿', desc: '扎破轮胎，伤害行走僵尸' },
+  { id: 11, name_cn: '火炬树桩', name_en: 'Torchwood', cost: 175, emoji: '🔥', desc: '点燃经过的豌豆，伤害翻倍' },
+  { id: 12, name_cn: '高坚果', name_en: 'Tall-nut', cost: 125, emoji: '🌰', desc: '超高血量，阻挡跳跳僵尸' },
+  { id: 13, name_cn: '三线射手', name_en: 'Threepeater', cost: 325, emoji: '🔱', desc: '三行同时发射豌豆' },
+  { id: 14, name_cn: '缠绕水草', name_en: 'Tangle Kelp', cost: 25, emoji: '🌊', desc: '水下拉住僵尸拖入水底' },
+  { id: 15, name_cn: '火爆辣椒（爆炸）', name_en: 'Jalapeno', cost: 125, emoji: '💥', desc: '整行火焰清除僵尸' },
+  { id: 16, name_cn: '地刺', name_en: 'Spikerock', cost: 125, emoji: '🌵', desc: '强化版荆棘，伤害更高' },
+  { id: 17, name_cn: '南瓜头', name_en: 'Pumpkin', cost: 125, emoji: '🎃', desc: '套在植物外层提供保护' },
+  { id: 18, name_cn: '磁力菇', name_en: 'Magnet-shroom', cost: 100, emoji: '🧲', desc: '吸走僵尸的铁制装备' },
+  { id: 19, name_cn: '卷心菜投手', name_en: 'Cabbage-pult', cost: 100, emoji: '🥬', desc: '投掷卷心菜攻击僵尸' },
+  { id: 20, name_cn: '花椰菜投手', name_en: 'Kernel-pult', cost: 100, emoji: '🌽', desc: '投掷玉米粒或黄油' },
+  { id: 21, name_cn: '玉米投手', name_en: 'Kernel-pult', cost: 100, emoji: '🌽', desc: '投掷玉米粒，有概率投黄油' },
+  { id: 22, name_cn: '西瓜投手', name_en: 'Melon-pult', cost: 300, emoji: '🍉', desc: '投掷西瓜，范围伤害' },
+  { id: 23, name_cn: '冰西瓜', name_en: 'Winter Melon', cost: 200, emoji: '冰冰', desc: '投掷冰西瓜，范围伤害+减速' },
+  { id: 24, name_cn: '金盏花', name_en: 'Marigold', cost: 50, emoji: '🌼', desc: '产生金币的观赏植物' },
+  { id: 25, name_cn: '机枪豌豆', name_en: 'Gatling Pea', cost: 450, emoji: '🔫', desc: '一次发射四颗豌豆' },
+  { id: 26, name_cn: '双子向日葵', name_en: 'Twin Sunflower', cost: 150, emoji: '🌻🌻', desc: '产生双倍阳光' },
+  { id: 27, name_cn: '忧郁蘑菇', name_en: 'Gloom-shroom', cost: 150, emoji: '🍄', desc: '周围释放毒雾攻击' },
+  { id: 28, name_cn: '香蒲', name_en: 'Cattail', cost: 225, emoji: '🐱', desc: '攻击任意行的气球僵尸' },
+  { id: 29, name_cn: '地刺王', name_en: 'Spikerock', cost: 125, emoji: '🌵', desc: '强化地刺，可承受多次' },
+  { id: 30, name_cn: '玉米加农炮', name_en: 'Cob Cannon', cost: 500, emoji: '🚀', desc: '发射玉米炮弹，大范围爆炸' },
+  // 夜间关卡植物（蘑菇类）
+  { id: 31, name_cn: '喷射蘑菇', name_en: 'Puff-shroom', cost: 0, emoji: '🍄', desc: '免费种植，近距离喷射' },
+  { id: 32, name_cn: '阳光蘑菇', name_en: 'Sun-shroom', cost: 25, emoji: '☀️', desc: '产生小阳光，逐渐变大' },
+  { id: 33, name_cn: '烟雾蘑菇', name_en: 'Scaredy-shroom', cost: 25, emoji: '😶‍🌫️', desc: '远距离喷射，僵尸靠近会躲' },
+  { id: 34, name_cn: '冰冻蘑菇', name_en: 'Ice-shroom', cost: 75, emoji: '🧊', desc: '冻结全场僵尸一段时间' },
+  { id: 35, name_cn: '毁灭蘑菇', name_en: 'Doom-shroom', cost: 125, emoji: '💀', desc: '巨大爆炸，留下弹坑' },
+  { id: 36, name_cn: '小喷菇', name_en: 'Puff-shroom', cost: 0, emoji: '🍄', desc: '免费短程攻击蘑菇' },
+  { id: 37, name_cn: '咖啡豆', name_en: 'Coffee Bean', cost: 75, emoji: '☕', desc: '唤醒白天的蘑菇' },
+  { id: 38, name_cn: '大蒜', name_en: 'Garlic', cost: 50, emoji: '🧄', desc: '让僵尸换道而行' },
+  // 水族馆/泳池植物
+  { id: 39, name_cn: '睡莲', name_en: 'Lily Pad', cost: 25, emoji: '🪷', desc: '水上种植平台' },
+  { id: 40, name_cn: '水草', name_en: 'Tangle Kelp', cost: 25, emoji: '🌱', desc: '水下拖拽僵尸' },
+  // 屋顶植物
+  { id: 41, name_cn: '花椰菜', name_en: 'Flower Pot', cost: 25, emoji: '🪴', desc: '屋顶种植的花盆' },
+  { id: 42, name_cn: '萝卜伞', name_en: 'Umbrella Leaf', cost: 100, emoji: '☂️', desc: '保护3x3范围免受投掷攻击' },
+  // 其他/升级植物
+  { id: 43, name_cn: '杨桃', name_en: 'Starfruit', cost: 125, emoji: '⭐', desc: '向五个方向发射星星' },
+  { id: 44, name_cn: '喇叭花', name_en: 'Magnet-shroom', cost: 100, emoji: '🌸', desc: '吸引僵尸的铁器' },
+  { id: 45, name_cn: '模仿者', name_en: 'Imitater', cost: 0, emoji: '🎭', desc: '模仿其他植物的外形' },
+  { id: 46, name_cn: '爆炸坚果', name_en: 'Explode-o-nut', cost: 25, emoji: '🥥', desc: '被吃掉时爆炸消灭僵尸' },
+  { id: 47, name_cn: '大喷菇', name_en: 'Fume-shroom', cost: 75, emoji: '💨', desc: '喷射烟雾穿透僵尸' },
+  { id: 48, name_cn: '巨型坚果', name_en: 'Giant Wall-nut', cost: 50, emoji: '🥜', desc: '巨型坚果墙，超高血量' }
+];
+
+/* 默认分类 */
+const DEFAULT_CATEGORIES = [
+  { id: 1, type: 'income', name: '正餐', icon: '🍽️' },
+  { id: 2, type: 'income', name: '外卖', icon: '🥡' },
+  { id: 3, type: 'income', name: '零售', icon: '🛒' },
+  { id: 4, type: 'income', name: '其他收入', icon: '💰' },
+  { id: 5, type: 'expense', name: '进货', icon: '📦' },
+  { id: 6, type: 'expense', name: '房租', icon: '🏠' },
+  { id: 7, type: 'expense', name: '水电', icon: '💡' },
+  { id: 8, type: 'expense', name: '餐饮', icon: '🍜' },
+  { id: 9, type: 'expense', name: '人工', icon: '👷' },
+  { id: 10, type: 'expense', name: '其他支出', icon: '💸' }
+];
+
+/* ========================================
+   初始化
+   ======================================== */
+async function initDB() {
+  await openDB();
+  // 初始化分类
+  const cats = await dbGetAll('categories');
+  if (cats.length === 0) {
+    for (const c of DEFAULT_CATEGORIES) await dbAdd('categories', c);
+  }
+  // 初始化植物
+  const plants = await dbGetAll('plants');
+  if (plants.length === 0) {
+    for (const p of PLANTS_DATA) {
+      await dbPut('plants', { ...p, unlocked: false, unlocked_at: null });
+    }
+  }
+  // 初始化海豚
+  const dolphin = await dbGet('dolphin', 1);
+  if (!dolphin) {
+    await dbPut('dolphin', {
+      id: 1, level: 1, exp: 0, exp_max: 100,
+      weight: 30, accompany_days: 1, fullness: 80, mood: 'happy',
+      last_fed: Date.now(), last_seen: Date.now(), created_at: Date.now()
+    });
+  }
+  // 初始化设置
+  const settings = await dbGetAll('settings');
+  if (!settings.find(s => s.key === 'currentDate')) {
+    await dbPut('settings', { key: 'currentDate', value: todayStr() });
+  }
+  if (!settings.find(s => s.key === 'financeDate')) {
+    await dbPut('settings', { key: 'financeDate', value: todayStr() });
+  }
+}
+
+/* ========================================
+   工具函数
+   ======================================== */
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function formatDate(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const diff = Math.round((d - today) / 86400000);
+  const mmdd = `${d.getMonth()+1}月${d.getDate()}日`;
+  const weekDays = ['日','一','二','三','四','五','六'];
+  const week = `周${weekDays[d.getDay()]}`;
+  if (diff === 0) return `${mmdd} ${week} · 今天`;
+  if (diff === -1) return `${mmdd} ${week} · 昨天`;
+  if (diff === 1) return `${mmdd} ${week} · 明天`;
+  return `${mmdd} ${week}`;
+}
+
+function shortDate(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  return `${d.getMonth()+1}/${d.getDate()}`;
+}
+
+function showToast(msg, duration = 2000) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), duration);
+}
+
+function showModal(html) {
+  document.getElementById('modalContent').innerHTML = html;
+  document.getElementById('modalOverlay').classList.add('show');
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('show');
+}
+
+document.getElementById('modalOverlay').addEventListener('click', (e) => {
+  if (e.target.id === 'modalOverlay') closeModal();
+});
+
+/* ========================================
+   积分系统
+   ======================================== */
+async function getPointsBalance() {
+  const logs = await dbGetAll('points_log');
+  if (logs.length === 0) return 0;
+  return logs[logs.length - 1].balance_after;
+}
+
+async function addPoints(change, reason) {
+  const balance = await getPointsBalance();
+  const newBalance = balance + change;
+  if (newBalance < 0) return false;
+  await dbAdd('points_log', {
+    change, reason, balance_after: newBalance, created_at: Date.now()
+  });
+  updateHeaderStats();
+  return true;
+}
+
+async function getPointsLog(limit = 20) {
+  const logs = await dbGetAll('points_log');
+  return logs.slice(-limit).reverse();
+}
+
+/* ========================================
+   页面切换
+   ======================================== */
+let currentPage = 'plan';
+
+function switchPage(page) {
+  currentPage = page;
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.page === page));
+  document.getElementById('fab').style.display = (page === 'plan' || page === 'finance') ? 'flex' : 'none';
+
+  if (page === 'plan') renderTasks();
+  if (page === 'finance') renderTransactions();
+  if (page === 'almanac') renderAlmanac();
+  if (page === 'dolphin') renderDolphin();
+}
+
+function onFabClick() {
+  if (currentPage === 'plan') showAddTaskModal();
+  if (currentPage === 'finance') showAddTxModal();
+}
+
+function toggleMenu() {
+  showModal(`
+    <div class="modal-header"><h2>☰ 菜单</h2><button class="modal-close" onclick="closeModal()">×</button></div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <button class="btn btn-primary btn-full" onclick="exportData()">📥 导出数据备份</button>
+      <button class="btn btn-ghost btn-full" onclick="document.getElementById('importFile').click()">📤 导入数据恢复</button>
+      <input type="file" id="importFile" accept=".json" style="display:none;" onchange="importData(event)">
+      <button class="btn btn-ghost btn-full" style="color:var(--pink-cute);" onclick="confirmReset()">🗑️ 清空所有数据</button>
+    </div>
+    <div style="margin-top:16px;font-size:12px;color:var(--text-muted);text-align:center;">
+      🌿 每日花园 v1.0<br>建议定期导出数据备份，防止iOS清理
+    </div>
+  `);
+}
+
+/* ========================================
+   每日计划模块
+   ======================================== */
+let currentPlanDate = todayStr();
+
+async function getSetting(key) {
+  const s = await dbGet('settings', key);
+  return s ? s.value : null;
+}
+
+async function setSetting(key, value) {
+  await dbPut('settings', { key, value });
+}
+
+async function changeDate(delta) {
+  const d = new Date(currentPlanDate + 'T00:00:00');
+  d.setDate(d.getDate() + delta);
+  currentPlanDate = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  await setSetting('currentDate', currentPlanDate);
+  renderTasks();
+}
+
+async function renderTasks() {
+  currentPlanDate = await getSetting('currentDate') || todayStr();
+  document.getElementById('planDateDisplay').textContent = formatDate(currentPlanDate);
+  const today = todayStr();
+  document.getElementById('planTodayTag').style.display = (currentPlanDate === today) ? 'inline' : 'none';
+
+  const tasks = await dbGetByIndex('tasks', 'plan_date', currentPlanDate);
+  tasks.sort((a, b) => (a.done - b.done) || (a.created_at - b.created_at));
+
+  const list = document.getElementById('taskList');
+  const done = tasks.filter(t => t.done).length;
+  const total = tasks.length;
+  const pct = total > 0 ? (done / total * 100) : 0;
+
+  document.getElementById('planProgressText').textContent = `${done}/${total}`;
+  document.getElementById('planProgressFill').style.width = pct + '%';
+
+  if (tasks.length === 0) {
+    list.innerHTML = `<div class="empty-state"><span class="emoji">📝</span><span class="text">今天还没有计划<br>点击右下角 + 添加任务</span></div>`;
+    return;
+  }
+
+  list.innerHTML = tasks.map(t => `
+    <li class="task-item ${t.done ? 'done' : ''}" data-id="${t.id}">
+      <div class="task-checkbox" onclick="toggleTask(${t.id})">${t.done ? '✓' : ''}</div>
+      <div class="task-content">
+        <div class="task-title">${escapeHtml(t.title)}</div>
+        ${t.note ? `<div class="task-note">${escapeHtml(t.note)}</div>` : ''}
+      </div>
+      <div class="task-points">+10</div>
+      <div class="task-actions">
+        <button onclick="editTask(${t.id})">✏️</button>
+        <button onclick="deleteTask(${t.id})">🗑️</button>
+      </div>
+    </li>
+  `).join('');
+}
+
+function showAddTaskModal(task = null) {
+  const isEdit = !!task;
+  showModal(`
+    <div class="modal-header">
+      <h2>${isEdit ? '✏️ 编辑任务' : '➕ 添加任务'}</h2>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="form-group">
+      <label>任务标题</label>
+      <input type="text" id="taskTitle" placeholder="比如：整理货架、备货" value="${isEdit ? escapeHtml(task.title) : ''}">
+    </div>
+    <div class="form-group">
+      <label>备注（可选）</label>
+      <textarea id="taskNote" placeholder="详细描述...">${isEdit ? escapeHtml(task.note || '') : ''}</textarea>
+    </div>
+    <div class="form-group">
+      <label>计划日期</label>
+      <input type="date" id="taskDate" value="${isEdit ? task.plan_date : currentPlanDate}">
+    </div>
+    <button class="btn btn-primary btn-full" onclick="saveTask(${isEdit ? task.id : 0})">💾 保存</button>
+  `);
+}
+
+async function saveTask(id) {
+  const title = document.getElementById('taskTitle').value.trim();
+  const note = document.getElementById('taskNote').value.trim();
+  const planDate = document.getElementById('taskDate').value || todayStr();
+  if (!title) { showToast('请输入任务标题'); return; }
+
+  if (id > 0) {
+    const task = await dbGet('tasks', id);
+    task.title = title;
+    task.note = note;
+    task.plan_date = planDate;
+    await dbPut('tasks', task);
+    showToast('✅ 任务已更新');
+  } else {
+    await dbAdd('tasks', {
+      title, note, plan_date: planDate, done: false, created_at: Date.now()
+    });
+    showToast('🎉 任务已添加');
+    await addPoints(5, '添加任务奖励');
+  }
+  closeModal();
+  renderTasks();
+}
+
+async function editTask(id) {
+  const task = await dbGet('tasks', id);
+  showAddTaskModal(task);
+}
+
+async function deleteTask(id) {
+  if (!confirm('确定删除这个任务吗？')) return;
+  await dbDelete('tasks', id);
+  showToast('已删除');
+  renderTasks();
+}
+
+async function toggleTask(id) {
+  const task = await dbGet('tasks', id);
+  const wasDone = task.done;
+  task.done = !task.done;
+  await dbPut('tasks', task);
+  if (!wasDone && task.done) {
+    await addPoints(10, `完成任务：${task.title}`);
+    showToast('🎉 完成！+10积分');
+  }
+  renderTasks();
+  updateHeaderStats();
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str || '';
+  return div.innerHTML;
+}
+
+/* ========================================
+   记账模块
+   ======================================== */
+let currentFinanceDate = todayStr();
+
+async function changeFinanceDate(delta) {
+  const d = new Date(currentFinanceDate + 'T00:00:00');
+  d.setDate(d.getDate() + delta);
+  currentFinanceDate = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  await setSetting('financeDate', currentFinanceDate);
+  renderTransactions();
+}
+
+let chartVisible = false;
+function toggleChart() {
+  chartVisible = !chartVisible;
+  document.getElementById('chartView').style.display = chartVisible ? 'block' : 'none';
+  if (chartVisible) renderWeekChart();
+}
+
+async function renderTransactions() {
+  currentFinanceDate = await getSetting('financeDate') || todayStr();
+  document.getElementById('financeDateDisplay').textContent = formatDate(currentFinanceDate);
+
+  const txs = await dbGetByIndex('transactions', 'date', currentFinanceDate);
+  txs.sort((a, b) => b.created_at - a.created_at);
+
+  const income = txs.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+  const expense = txs.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+  const profit = income - expense;
+
+  document.getElementById('totalIncome').textContent = '¥' + income.toFixed(0);
+  document.getElementById('totalExpense').textContent = '¥' + expense.toFixed(0);
+  document.getElementById('totalProfit').textContent = '¥' + profit.toFixed(0);
+
+  const cats = await dbGetAll('categories');
+  const catMap = {};
+  cats.forEach(c => catMap[c.id] = c);
+
+  const list = document.getElementById('txList');
+  if (txs.length === 0) {
+    list.innerHTML = `<div class="empty-state"><span class="emoji">📒</span><span class="text">今天还没有记账<br>点击右下角 + 添加</span></div>`;
+    return;
+  }
+
+  list.innerHTML = txs.map(t => {
+    const cat = catMap[t.category_id] || { icon: '💰', name: '其他' };
+    return `
+      <div class="tx-item">
+        <div class="tx-icon ${t.type}">${cat.icon}</div>
+        <div class="tx-content">
+          <div class="tx-category">${cat.name}</div>
+          <div class="tx-note">${t.note ? escapeHtml(t.note) : shortDate(t.date)}</div>
+        </div>
+        <div class="tx-amount ${t.type}">${t.type === 'income' ? '+' : '-'}¥${t.amount.toFixed(0)}</div>
+        <div class="task-actions">
+          <button onclick="deleteTx(${t.id})">🗑️</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function showAddTxModal() {
+  const cats = await dbGetAll('categories');
+  const incomeCats = cats.filter(c => c.type === 'income');
+  const expenseCats = cats.filter(c => c.type === 'expense');
+
+  showModal(`
+    <div class="modal-header">
+      <h2>➕ 添加收支</h2>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="form-group">
+      <label>类型</label>
+      <div class="category-pills">
+        <span class="pill active" id="pill-income" onclick="selectTxType('income')">💰 收入</span>
+        <span class="pill" id="pill-expense" onclick="selectTxType('expense')">💸 支出</span>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>金额</label>
+      <input type="number" id="txAmount" placeholder="0" inputmode="decimal">
+    </div>
+    <div class="form-group">
+      <label>分类</label>
+      <div class="category-pills" id="txCategoryPills">
+        ${incomeCats.map(c => `<span class="pill" data-cat="${c.id}" onclick="selectCategory(this)">${c.icon} ${c.name}</span>`).join('')}
+      </div>
+    </div>
+    <div class="form-group">
+      <label>备注（可选）</label>
+      <input type="text" id="txNote" placeholder="备注...">
+    </div>
+    <div class="form-group">
+      <label>日期</label>
+      <input type="date" id="txDate" value="${currentFinanceDate}">
+    </div>
+    <button class="btn btn-primary btn-full" onclick="saveTx()">💾 保存</button>
+  `);
+  window._incomeCats = incomeCats;
+  window._expenseCats = expenseCats;
+  window._txType = 'income';
+  window._txCategoryId = incomeCats[0]?.id;
+  if (window._txCategoryId) {
+    document.querySelector(`#txCategoryPills .pill[data-cat="${window._txCategoryId}"]`)?.classList.add('active');
+  }
+}
+
+function selectTxType(type) {
+  window._txType = type;
+  document.getElementById('pill-income').classList.toggle('active', type === 'income');
+  document.getElementById('pill-expense').classList.toggle('active', type === 'expense');
+  const cats = type === 'income' ? window._incomeCats : window._expenseCats;
+  const container = document.getElementById('txCategoryPills');
+  container.innerHTML = cats.map(c => `<span class="pill" data-cat="${c.id}" onclick="selectCategory(this)">${c.icon} ${c.name}</span>`).join('');
+  window._txCategoryId = cats[0]?.id;
+  if (window._txCategoryId) {
+    container.querySelector(`.pill[data-cat="${window._txCategoryId}"]`)?.classList.add('active');
+  }
+}
+
+function selectCategory(el) {
+  el.parentElement.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  window._txCategoryId = parseInt(el.dataset.cat);
+}
+
+async function saveTx() {
+  const amount = parseFloat(document.getElementById('txAmount').value);
+  if (!amount || amount <= 0) { showToast('请输入有效金额'); return; }
+  const note = document.getElementById('txNote').value.trim();
+  const date = document.getElementById('txDate').value || todayStr();
+  const type = window._txType;
+  const categoryId = window._txCategoryId;
+
+  await dbAdd('transactions', {
+    type, amount, category_id: categoryId, note, date, created_at: Date.now()
+  });
+
+  // 净利润达标奖励
+  if (type === 'income') {
+    const txs = await dbGetByIndex('transactions', 'date', date);
+    const income = txs.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+    const expense = txs.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+    if (income - expense >= 100 && income - expense - amount < 100) {
+      await addPoints(5, '净利润达标奖励');
+    }
+  }
+
+  showToast('✅ 已记录');
+  closeModal();
+  renderTransactions();
+  updateHeaderStats();
+}
+
+async function deleteTx(id) {
+  if (!confirm('确定删除这条记录吗？')) return;
+  await dbDelete('transactions', id);
+  showToast('已删除');
+  renderTransactions();
+}
+
+async function renderWeekChart() {
+  const container = document.getElementById('weekChart');
+  let html = '';
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const txs = await dbGetByIndex('transactions', 'date', dateStr);
+    const income = txs.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+    const expense = txs.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+    const maxVal = Math.max(income, expense, 1);
+    const incomeH = (income / maxVal * 100);
+    const expenseH = (expense / maxVal * 100);
+    html += `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;">
+      <div style="display:flex;gap:2px;align-items:flex-end;height:100px;">
+        <div class="bar" style="width:8px;height:${incomeH}%;"></div>
+        <div class="bar expense-bar" style="width:8px;height:${expenseH}%;"></div>
+      </div>
+      <div class="bar-label">${shortDate(dateStr)}</div>
+    </div>`;
+  }
+  container.innerHTML = html;
+}
+
+/* ========================================
+   植物图鉴模块
+   ======================================== */
+async function renderAlmanac() {
+  const balance = await getPointsBalance();
+  document.getElementById('almanacPoints').textContent = balance;
+
+  const plants = await dbGetAll('plants');
+  plants.sort((a, b) => a.cost - b.cost);
+  const unlocked = plants.filter(p => p.unlocked);
+
+  document.getElementById('unlockedCount').textContent = unlocked.length;
+  document.getElementById('totalPlants').textContent = plants.length;
+
+  const grid = document.getElementById('plantsGrid');
+  grid.innerHTML = plants.map(p => `
+    <div class="plant-card ${p.unlocked ? 'unlocked' : 'locked'}" onclick="showPlantDetail(${p.id})">
+      <span class="plant-emoji">${p.emoji}</span>
+      <div class="plant-name">${p.name_cn}</div>
+      <div class="plant-cost">☀️ ${p.cost}</div>
+    </div>
+  `).join('');
+
+  // 我的花园
+  const garden = document.getElementById('gardenPlants');
+  if (unlocked.length === 0) {
+    garden.innerHTML = `<div class="empty-state" style="padding:20px;"><span class="text">还没有植物，去图鉴兑换吧！</span></div>`;
+  } else {
+    garden.innerHTML = unlocked.map(p => `<span class="garden-plant" title="${p.name_cn}">${p.emoji}</span>`).join('');
+  }
+
+  // 积分日志
+  const logs = await getPointsLog(15);
+  const logEl = document.getElementById('pointsLog');
+  if (logs.length === 0) {
+    logEl.innerHTML = `<div class="empty-state" style="padding:20px;"><span class="text">还没有积分记录</span></div>`;
+  } else {
+    logEl.innerHTML = logs.map(l => `
+      <div class="points-log-item">
+        <span class="reason">${escapeHtml(l.reason)}</span>
+        <span class="change ${l.change > 0 ? 'plus' : 'minus'}">${l.change > 0 ? '+' : ''}${l.change}</span>
+      </div>
+    `).join('');
+  }
+}
+
+async function showPlantDetail(id) {
+  const plant = await dbGet('plants', id);
+  const balance = await getPointsBalance();
+  const canAfford = balance >= plant.cost;
+
+  showModal(`
+    <div class="modal-header">
+      <h2>${plant.emoji} ${plant.name_cn}</h2>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div style="text-align:center;padding:10px 0;">
+      <div style="font-size:72px;">${plant.emoji}</div>
+      <div style="font-size:14px;color:var(--text-muted);margin-top:4px;">${plant.name_en}</div>
+    </div>
+    <div class="card" style="background:var(--green-bg);">
+      <div style="font-size:14px;color:var(--text-body);margin-bottom:8px;">${plant.desc}</div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;">
+        <span>💰 兑换价格</span>
+        <span style="font-weight:700;color:var(--yellow-sun);">☀️ ${plant.cost} 积分</span>
+      </div>
+    </div>
+    ${plant.unlocked ? `
+      <div class="card" style="background:var(--green-bg);text-align:center;color:var(--green-dark);font-weight:600;">
+        ✅ 已拥有 · 已加入花园
+      </div>
+    ` : `
+      <button class="btn btn-primary btn-full" ${canAfford ? '' : 'disabled'} onclick="unlockPlant(${plant.id})">
+        ${canAfford ? `🌱 兑换（消耗 ${plant.cost} 积分）` : `积分不足（还需 ${plant.cost - balance}）`}
+      </button>
+    `}
+  `);
+}
+
+async function unlockPlant(id) {
+  const plant = await dbGet('plants', id);
+  const success = await addPoints(-plant.cost, `兑换植物：${plant.name_cn}`);
+  if (success) {
+    plant.unlocked = true;
+    plant.unlocked_at = Date.now();
+    await dbPut('plants', plant);
+    showToast(`🎉 获得 ${plant.name_cn}！`);
+    closeModal();
+    renderAlmanac();
+  } else {
+    showToast('积分不足');
+  }
+  updateHeaderStats();
+}
+
+/* ========================================
+   海豚模块
+   ======================================== */
+function getDolphinSVG(level) {
+  // 根据等级返回不同形态
+  const size = level >= 10 ? 140 : level >= 5 ? 130 : 120;
+  const color = level >= 10 ? '#E1F5FE' : '#B3E5FC';
+  return `
+    <svg class="dolphin-svg" viewBox="0 0 200 120" style="width:${size}px;" onclick="dolphinClick()">
+      <!-- 海豚身体 -->
+      <ellipse cx="90" cy="60" rx="55" ry="22" fill="${color}" stroke="#0288D1" stroke-width="2"/>
+      <!-- 海豚腹部 -->
+      <ellipse cx="90" cy="72" rx="40" ry="12" fill="#FFFFFF" opacity="0.6"/>
+      <!-- 头部 -->
+      <ellipse cx="130" cy="55" rx="28" ry="20" fill="${color}" stroke="#0288D1" stroke-width="2"/>
+      <!-- 嘴部 -->
+      <path d="M 150 58 L 165 55 L 165 62 L 150 65 Z" fill="${color}" stroke="#0288D1" stroke-width="2"/>
+      <!-- 眼睛 -->
+      <circle cx="135" cy="50" r="4" fill="#333"/>
+      <circle cx="136" cy="49" r="1.5" fill="#FFF"/>
+      <!-- 微笑 -->
+      <path d="M 145 62 Q 150 66 155 62" stroke="#0288D1" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+      <!-- 背鳍 -->
+      <path d="M 85 40 Q 75 15 90 38 Z" fill="${color}" stroke="#0288D1" stroke-width="2"/>
+      <!-- 胸鳍 -->
+      <path d="M 80 75 Q 70 90 85 80 Z" fill="${color}" stroke="#0288D1" stroke-width="2"/>
+      <!-- 尾鳍 -->
+      <path d="M 35 55 Q 15 40 20 60 Q 15 80 35 65 Z" fill="${color}" stroke="#0288D1" stroke-width="2"/>
+      ${level >= 5 ? '<text x="90" y="35" font-size="14" text-anchor="middle">⭐</text>' : ''}
+      ${level >= 10 ? '<text x="90" y="25" font-size="14" text-anchor="middle">👑</text>' : ''}
+    </svg>
+  `;
+}
+
+async function renderDolphin() {
+  const dolphin = await dbGet('dolphin', 1);
+  const today = todayStr();
+  const lastSeenDate = new Date(dolphin.last_seen).toISOString().slice(0,10);
+
+  // 更新陪伴天数
+  if (lastSeenDate !== today) {
+    const createdDate = new Date(dolphin.created_at).toISOString().slice(0,10);
+    const days = Math.floor((new Date(today) - new Date(createdDate)) / 86400000) + 1;
+    dolphin.accompany_days = days;
+    // 饱食度每天下降
+    const daysPassed = Math.floor((new Date(today) - new Date(lastSeenDate)) / 86400000);
+    dolphin.fullness = Math.max(0, dolphin.fullness - daysPassed * 15);
+    dolphin.last_seen = Date.now();
+    await dbPut('dolphin', dolphin);
+  }
+
+  // 计算心情
+  const tasks = await dbGetByIndex('tasks', 'plan_date', today);
+  const doneTasks = tasks.filter(t => t.done).length;
+  const totalTasks = tasks.length;
+  let mood, moodEmoji;
+  if (dolphin.fullness < 20) { mood = 'sad'; moodEmoji = '😢 饿了'; }
+  else if (totalTasks > 0 && doneTasks === totalTasks) { mood = 'happy'; moodEmoji = '😄 开心'; }
+  else if (totalTasks > 0 && doneTasks >= totalTasks / 2) { mood = 'normal'; moodEmoji = '😊 悠闲'; }
+  else if (totalTasks > 0 && doneTasks === 0) { mood = 'worried'; moodEmoji = '😴 期待'; }
+  else { mood = 'normal'; moodEmoji = '😊 悠闲'; }
+
+  dolphin.mood = mood;
+  await dbPut('dolphin', dolphin);
+
+  // 渲染
+  document.getElementById('dolphinLv').textContent = dolphin.level;
+  document.getElementById('dolphinExp').textContent = dolphin.exp;
+  document.getElementById('dolphinExpMax').textContent = dolphin.exp_max;
+  document.getElementById('expFill').style.width = (dolphin.exp / dolphin.exp_max * 100) + '%';
+  document.getElementById('dolphinFullness').textContent = Math.round(dolphin.fullness);
+  document.getElementById('fullnessFill').style.width = dolphin.fullness + '%';
+  document.getElementById('dolphinWeight').textContent = dolphin.weight;
+  document.getElementById('dolphinDays').textContent = dolphin.accompany_days;
+  document.getElementById('moodBadge').textContent = moodEmoji;
+
+  // 海豚 SVG
+  const container = document.getElementById('dolphinContainer');
+  let animationStyle = '';
+  if (mood === 'happy') animationStyle = 'animation: dolphinSwim 6s ease-in-out infinite, dolphinFloat 2s ease-in-out infinite;';
+  else if (mood === 'sad') animationStyle = 'animation: dolphinSwim 12s ease-in-out infinite, dolphinFloat 4s ease-in-out infinite; opacity:0.7;';
+  else animationStyle = 'animation: dolphinSwim 8s ease-in-out infinite, dolphinFloat 2.5s ease-in-out infinite;';
+
+  container.innerHTML = getDolphinSVG(dolphin.level).replace('class="dolphin-svg"', `class="dolphin-svg" style="width:${dolphin.level >= 10 ? 140 : dolphin.level >= 5 ? 130 : 120}px;${animationStyle}"`);
+
+  // 添加气泡
+  if (mood === 'happy') {
+    let bubbles = '';
+    for (let i = 0; i < 5; i++) {
+      const left = 10 + Math.random() * 80;
+      const delay = i * 0.6;
+      const size = 8 + Math.random() * 12;
+      bubbles += `<div class="bubble" style="left:${left}%;width:${size}px;height:${size}px;animation-delay:${delay}s;"></div>`;
+    }
+    container.innerHTML += bubbles;
+  }
+
+  // 档案
+  const profile = document.getElementById('dolphinProfile');
+  let profileText = `这是一只可爱的小海豚，已经陪伴你 ${dolphin.accompany_days} 天。`;
+  if (dolphin.level >= 10) profileText += ' 它现在已经是一位王者海豚了！👑';
+  else if (dolphin.level >= 5) profileText += ' 它已经成长为一只优秀的海豚！⭐';
+  if (dolphin.fullness < 30) profileText += ' 它现在很饿，快喂它吃东西吧！';
+  else if (dolphin.fullness > 80) profileText += ' 它吃得很饱，心情很好。';
+  profile.textContent = profileText;
+
+  updateHeaderStats();
+}
+
+async function dolphinClick() {
+  const dolphin = await dbGet('dolphin', 1);
+  // 点击增加少量经验
+  if (dolphin.exp < dolphin.exp_max) {
+    dolphin.exp += 2;
+    if (dolphin.exp >= dolphin.exp_max) {
+      dolphin.level += 1;
+      dolphin.exp = dolphin.exp - dolphin.exp_max;
+      dolphin.exp_max = Math.round(dolphin.exp_max * 1.5);
+      dolphin.weight += 5;
+      showToast(`🎉 海豚升级到 Lv.${dolphin.level}！`);
+    }
+    await dbPut('dolphin', dolphin);
+  }
+  showToast('🐬 ♥');
+  renderDolphin();
+}
+
+const FOOD_DATA = {
+  fish: { cost: 10, exp: 10, fullness: 15, weight: 1, name: '小鱼🐟' },
+  shrimp: { cost: 20, exp: 25, fullness: 25, weight: 2, name: '小虾🦐' },
+  squid: { cost: 50, exp: 80, fullness: 50, weight: 5, name: '章鱼🦑' }
+};
+
+async function feedDolphin(food) {
+  const f = FOOD_DATA[food];
+  const balance = await getPointsBalance();
+  if (balance < f.cost) { showToast(`积分不足，需要 ${f.cost} 积分`); return; }
+
+  const dolphin = await dbGet('dolphin', 1);
+  await addPoints(-f.cost, `喂海豚吃${f.name}`);
+
+  dolphin.exp += f.exp;
+  dolphin.fullness = Math.min(100, dolphin.fullness + f.fullness);
+  dolphin.weight += f.weight;
+  dolphin.last_fed = Date.now();
+
+  // 升级检查
+  while (dolphin.exp >= dolphin.exp_max) {
+    dolphin.exp -= dolphin.exp_max;
+    dolphin.level += 1;
+    dolphin.exp_max = Math.round(dolphin.exp_max * 1.5);
+    showToast(`🎉 海豚升级到 Lv.${dolphin.level}！`);
+  }
+
+  await dbPut('dolphin', dolphin);
+  showToast(`🐬 吃得很开心！+${f.exp}经验`);
+  renderDolphin();
+}
+
+/* ========================================
+   顶部状态更新
+   ======================================== */
+async function updateHeaderStats() {
+  const balance = await getPointsBalance();
+  document.getElementById('headerPoints').textContent = balance;
+
+  const dolphin = await dbGet('dolphin', 1);
+  if (dolphin) document.getElementById('headerDolphinLv').textContent = dolphin.level;
+
+  const d = new Date();
+  document.getElementById('headerDate').textContent = `${d.getMonth()+1}/${d.getDate()}`;
+
+  // 更新角标
+  if ('setAppBadge' in navigator) {
+    const tasks = await dbGetByIndex('tasks', 'plan_date', todayStr());
+    const undone = tasks.filter(t => !t.done).length;
+    try { await navigator.setAppBadge(undone); } catch(e) {}
+  }
+}
+
+/* ========================================
+   数据导入导出
+   ======================================== */
+async function exportData() {
+  const data = {};
+  for (const store of Object.keys(STORES)) {
+    data[store] = await dbGetAll(store);
+  }
+  data._exportTime = new Date().toISOString();
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `daily-garden-backup-${todayStr()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('✅ 已导出备份');
+  closeModal();
+}
+
+async function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (!confirm('导入将覆盖现有数据，确定继续吗？')) return;
+
+  const text = await file.text();
+  try {
+    const data = JSON.parse(text);
+    for (const store of Object.keys(STORES)) {
+      if (data[store]) {
+        await dbClear(store);
+        for (const item of data[store]) {
+          await dbPut(store, item);
+        }
+      }
+    }
+    showToast('✅ 导入成功');
+    closeModal();
+    switchPage(currentPage);
+    updateHeaderStats();
+  } catch (e) {
+    showToast('❌ 文件格式错误');
+  }
+}
+
+async function confirmReset() {
+  if (!confirm('⚠️ 确认清空所有数据？此操作不可恢复！')) return;
+  if (!confirm('再次确认：所有任务、记账、植物、海豚数据将被清空！')) return;
+  for (const store of Object.keys(STORES)) {
+    await dbClear(store);
+  }
+  await initDB();
+  showToast('已清空，重新开始');
+  closeModal();
+  switchPage(currentPage);
+  updateHeaderStats();
+}
+
+/* ========================================
+   启动
+   ======================================== */
+async function init() {
+  await initDB();
+  await updateHeaderStats();
+  await renderTasks();
+  // 隐藏引导（已添加主屏幕后）
+  if (window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches) {
+    document.getElementById('guideBanner').style.display = 'none';
+  }
+  // 注册 Service Worker
+  if ('serviceWorker' in navigator) {
+    try {
+      await navigator.serviceWorker.register('sw.js');
+    } catch (e) {
+      console.log('SW注册失败:', e);
+    }
+  }
+}
+
+init();
+</script>
+</body>
+</html>
